@@ -1994,6 +1994,13 @@ elseif(RISCOS)
     set(HAVE_SDL_VIDEO TRUE)
   endif()
 
+  if(SDL_FILESYSTEM)
+    set(SDL_FILESYSTEM_RISCOS 1)
+    file(GLOB FILESYSTEM_SOURCES ${SDL2_SOURCE_DIR}/src/filesystem/riscos/*.c)
+    set(SOURCE_FILES ${SOURCE_FILES} ${FILESYSTEM_SOURCES})
+    set(HAVE_SDL_FILESYSTEM TRUE)
+  endif()
+
   if(SDL_TIMERS)
     set(SDL_TIMER_UNIX 1)
     file(GLOB TIMER_SOURCES ${SDL2_SOURCE_DIR}/src/timer/unix/*.c)
