@@ -41,23 +41,10 @@ jobs:
                 - os: ubuntu-20.04
                   configureFlags: --enable-video-kmsdrm
                 - os: macos-latest
-                - os: windows-latest
-                  msystem: MINGW32
-                - os: windows-latest
-                  msystem: MINGW64
-
-        defaults:
-            run:
-                shell: bash
 
         runs-on: ${{ matrix.os }}
         steps:
         - uses: actions/checkout@v1
-        
-        - uses: msys2/setup-msys2@v2
-          if: ${{ matrix.msystem }}
-          with:
-              msystem: ${{ matrix.msystem }}
 
         - name: Setup
           if: startsWith(matrix.os, 'ubuntu')
@@ -88,6 +75,9 @@ jobs:
           if: ${{ matrix.msystem }}
           with:
               msystem: ${{ matrix.msystem }}
+              install: >-
+                  base-devel
+                  git
 
         - name: Build
           shell: msys2 {0}
