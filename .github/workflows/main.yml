@@ -46,6 +46,10 @@ jobs:
                 - os: windows-latest
                   msystem: MINGW64
 
+        defaults:
+            run:
+                shell: bash
+
         runs-on: ${{ matrix.os }}
         steps:
         - uses: actions/checkout@v1
