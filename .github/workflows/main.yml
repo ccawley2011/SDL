@@ -12,7 +12,7 @@ jobs:
           run: |
             mkdir build
             cd build
-            cmake ..
+            cmake .. -DSDL_TEST=ON
             cmake --build .
 
     linux:
@@ -34,7 +34,7 @@ jobs:
           run: |
             mkdir build
             cd build
-            cmake .. -GNinja
+            cmake .. -GNinja -DSDL_TEST=ON
             cmake --build .
 
     windows:
@@ -47,5 +47,5 @@ jobs:
           run: |
             mkdir build
             cd build
-            cmake ..
+            cmake .. -DSDL_TEST=ON
             cmake --build .
