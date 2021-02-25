@@ -74,3 +74,23 @@ jobs:
           run: |
             ./configure ${{ matrix.configureFlags }}
             make -j2
+
+    mingw:
+        strategy:
+            matrix:
+                msystem: [MINGW32, MINGW64]
+
+        runs-on: windows-latest
+        steps:
+        - uses: actions/checkout@v1
+        
+        - uses: msys2/setup-msys2@v2
+          if: ${{ matrix.msystem }}
+          with:
+              msystem: ${{ matrix.msystem }}
+
+        - name: Build
+          shell: msys2 {0}
+          run: |
+            ./configure ${{ matrix.configureFlags }}
+            make -j2
