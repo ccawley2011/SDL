@@ -36,7 +36,7 @@ jobs:
           ${{ matrix.platform.msys-env }}-pkg-config
 
     - name: Setup Linux dependencies
-      if: runner.os == 'Linux'
+      if: matrix.platform.name == 'FreeBSD'
       run: |
         sudo apt-get update
         sudo apt-get install wayland-protocols \
@@ -80,6 +80,7 @@ jobs:
         sudo meson install -C build
 
     - name: Setup FreeBSD dependencies
+      if: runner.os == 'Linux'
       uses: vmactions/freebsd-vm@v0.1.5
       with:
         usesh: true
