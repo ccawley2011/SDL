@@ -21,6 +21,7 @@ jobs:
         - { name: Windows (mingw64), os: windows-latest, shell: 'msys2 {0}', msystem: mingw64, msys-env: mingw-w64-x86_64 }
         - { name: Linux,             os: ubuntu-20.04,   shell: sh,   flags: -GNinja }
         - { name: MacOS,             os: macos-latest,   shell: sh }
+        - { name: FreeBSD,           os: macos-10.15,    shell: sh }
 
     steps:
     - name: Set up MSYS2
@@ -77,6 +78,40 @@ jobs:
         meson build --buildtype release -Ddemo=false -Ddbus=disabled
         ninja -C build
         sudo meson install -C build
+
+    - name: Setup FreeBSD dependencies
+      uses: vmactions/freebsd-vm@v0.1.5
+      with:
+        usesh: true
+        prepare: |
+            # Requested in ci/build-freebsd.sh
+            pkg install -y \
+                pkgconf \
+                ninja \
+                alsa-lib \
+                dbus \
+                libglvnd \
+                mesa-libs \
+                ibus \
+                pulseaudio \
+                sndio \
+                libudev-devd \
+                wayland \
+                wayland-protocols \
+                libX11 \
+                libXcursor \
+                libXext \
+                libXi \
+                libXinerama \
+                libxkbcommon \
+                libXrandr \
+                libXScrnSaver \
+                libXv \
+                libXxf86vm \
+                libdrm \
+                evdev-proto \
+                libdecor
+
     - uses: actions/checkout@v2
     - name: Configure CMake
       run: cmake -B build -DSDL_TEST=ON ${{ matrix.platform.flags }}
