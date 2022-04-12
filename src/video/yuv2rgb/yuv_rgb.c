@@ -7,7 +7,7 @@
 #include "yuv_rgb.h"
 
 #include "SDL_cpuinfo.h"
-/*#include <x86intrin.h>*/
+#include "SDL_intrin.h"
 
 #define PRECISION 6
 #define PRECISION_FACTOR (1<<PRECISION)

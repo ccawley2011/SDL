@@ -75,6 +75,9 @@
     <ClInclude Include="..\include\SDL_input.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\SDL_intrin.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\include\SDL_joystick.h">
       <Filter>Header Files</Filter>
     </ClInclude>

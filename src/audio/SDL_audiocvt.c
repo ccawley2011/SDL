@@ -32,6 +32,7 @@
 #include "SDL_loadso.h"
 #include "../SDL_dataqueue.h"
 #include "SDL_cpuinfo.h"
+#include "SDL_intrin.h"
 
 #define DEBUG_AUDIOSTREAM 0
 

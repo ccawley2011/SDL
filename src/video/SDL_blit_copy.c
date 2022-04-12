@@ -23,6 +23,8 @@
 #include "SDL_video.h"
 #include "SDL_blit.h"
 #include "SDL_blit_copy.h"
+#include "SDL_cpuinfo.h"
+#include "SDL_intrin.h"
 
 
 #ifdef __SSE__

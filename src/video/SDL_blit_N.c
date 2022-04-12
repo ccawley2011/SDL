@@ -26,6 +26,7 @@
 #include "SDL_endian.h"
 #include "SDL_cpuinfo.h"
 #include "SDL_blit.h"
+#include "SDL_intrin.h"
 
 
 /* General optimized routines that write char by char */

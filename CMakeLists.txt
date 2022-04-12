@@ -821,7 +821,7 @@ if(SDL_ASSEMBLY)
     endif()
 
   elseif(MSVC_VERSION GREATER 1500)
-    # TODO: SDL_cpuinfo.h needs to support the user's configuration wish
+    # TODO: SDL_intrin.h needs to support the user's configuration wish
     # for MSVC - right now it is always activated
     if(NOT ARCH_64)
       set(HAVE_MMX TRUE)

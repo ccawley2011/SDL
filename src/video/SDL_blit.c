@@ -26,6 +26,7 @@
 #include "SDL_blit_auto.h"
 #include "SDL_blit_copy.h"
 #include "SDL_blit_slow.h"
+#include "SDL_cpuinfo.h"
 #include "SDL_RLEaccel_c.h"
 #include "SDL_pixels_c.h"
 

@@ -23,6 +23,8 @@
 #include "SDL_video.h"
 #include "SDL_blit.h"
 #include "SDL_render.h"
+#include "SDL_cpuinfo.h"
+#include "SDL_intrin.h"
 
 static int SDL_LowerSoftStretchNearest(SDL_Surface *src, const SDL_Rect *srcrect, SDL_Surface *dst, const SDL_Rect *dstrect);
 static int SDL_LowerSoftStretchLinear(SDL_Surface *src, const SDL_Rect *srcrect, SDL_Surface *dst, const SDL_Rect *dstrect);
