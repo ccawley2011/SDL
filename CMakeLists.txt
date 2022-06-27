@@ -2523,16 +2523,16 @@ elseif(PSP)
   endif()
 
   list(APPEND EXTRA_LIBS
-      psppower
+      GL
+      pspvram
+      pspvfpu
+      pspdisplay
+      pspgu
+      pspge
+      pspaudio
       pspctrl
       psphprm
-      pspge
-      pspgu
-      pspdisplay
-      pspvfpu
-      pspaudio
-      pspvram
-      GL
+      psppower
   )
   if(NOT SDL2_DISABLE_SDL2MAIN)
     list(INSERT SDL_LIBS 0 "-lSDL2main")
