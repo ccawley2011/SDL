@@ -11,35 +11,9 @@ if(SDL_INSTALL_TESTS)
     include(GNUInstallDirs)
 endif()
 
-if(PSP)
-    link_libraries(
-        SDL2::SDL2main
-        SDL2::SDL2test
-        SDL2::SDL2-static
-        GL
-        pspvram
-        pspvfpu
-        pspdisplay
-        pspgu
-        pspge
-        pspaudio
-        pspctrl
-        psphprm
-        psppower
-    )
-elseif(PS2)
-link_libraries(
-        SDL2main
-        SDL2_test
-        SDL2-static
-        patches
-        ps2_drivers
-)
-else()
-    link_libraries(SDL2::SDL2test SDL2::SDL2-static)
-endif()
+link_libraries(SDL2::SDL2test SDL2::SDL2-static)
 
-if(WINDOWS)
+if(WINDOWS OR PSP OR PS2)
     # mingw32 must come before SDL2main to link successfully
     if(MINGW OR CYGWIN)
         link_libraries(mingw32)
@@ -47,7 +21,7 @@ if(WINDOWS)
 
     # FIXME: Parent directory CMakeLists.txt only sets these for mingw/cygwin,
     # but we need them for VS as well.
-    link_libraries(SDL2main)
+    link_libraries(SDL2::SDL2main)
     add_definitions(-Dmain=SDL_main)
 endif()
 
