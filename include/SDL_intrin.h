@@ -33,6 +33,7 @@
 /* Need to do this here because intrin.h has C++ code in it */
 /* Visual Studio 2005 has a bug where intrin.h conflicts with winnt.h */
 #if defined(_MSC_VER) && (_MSC_VER >= 1500) && (defined(_M_IX86) || defined(_M_X64))
+
 #ifdef __clang__
 /* As of Clang 11, '_m_prefetchw' is conflicting with the winnt.h's version,
    so we define the needed '_m_prefetch' here as a pseudo-header, until the issue is fixed. */
@@ -48,72 +49,143 @@ _m_prefetch(void *__P)
 
 #endif /* __PRFCHWINTRIN_H */
 #endif /* __clang__ */
+
 #include <intrin.h>
+
 #ifndef _WIN64
-#ifndef __MMX__
-#define __MMX__
+#define HAVE_MMX_INTRINSICS 1
+#define HAVE_3DNOW_INTRINSICS 1
 #endif
-#ifndef __3dNOW__
-#define __3dNOW__
+#define HAVE_SSE_INTRINSICS 1
+#define HAVE_SSE2_INTRINSICS 1
+#define HAVE_SSE3_INTRINSICS 1
+#if !defined(__clang__) || defined(__AVX__)
+# define HAVE_AVX_INTRINSICS 1
 #endif
-#endif
-#ifndef __SSE__
-#define __SSE__
-#endif
-#ifndef __SSE2__
-#define __SSE2__
-#endif
-#ifndef __SSE3__
-#define __SSE3__
-#endif
-#elif defined(__MINGW64_VERSION_MAJOR)
-#include <intrin.h>
-#if !defined(SDL_DISABLE_ARM_NEON_H) && defined(__ARM_NEON)
-#  include <arm_neon.h>
-#endif
+
+#elif defined(_MSC_VER) && defined(_M_ARM64)
+#include <arm64intr.h>
+#include <arm64_neon.h>
+
+#define HAVE_NEON_INTRINSICS 1
+
+#elif defined(_MSC_VER) && defined(_M_ARM)
+#include <armintr.h>
+#include <arm_neon.h>
+
+#define HAVE_NEON_INTRINSICS 1
+
 #else
+#ifdef __MMX__
+#define HAVE_MMX_INTRINSICS 1
+#endif
+#ifdef __3dNOW__
+#define HAVE_3DNOW_INTRINSICS 1
+#endif
+#ifdef __SSE__
+#define HAVE_SSE_INTRINSICS 1
+#endif
+#ifdef __SSE2__
+#define HAVE_SSE2_INTRINSICS 1
+#endif
+#ifdef __SSE3__
+#define HAVE_SSE3_INTRINSICS 1
+#endif
+#ifdef __AVX__
+#define HAVE_AVX_INTRINSICS 1
+#endif
+#ifdef __ALTIVEC__
+#define HAVE_ALTIVEC_INTRINSICS 1
+#endif
+#ifdef __ARM_NEON
+#define HAVE_NEON_INTRINSICS 1
+#endif
+
+#if defined(HAVE_IMMINTRIN_H) && !defined(SDL_DISABLE_IMMINTRIN_H)
+#define HAVE_AVX_INTRINSICS 1
+#endif
+#if defined __clang__
+# if (__has_attribute(target))
+#   define SDL_MMX_TARGET    __attribute__((target("mmx")))
+#   define SDL_3DNOW_TARGET  __attribute__((target("3dnow")))
+#   define SDL_SSE_TARGET    __attribute__((target("sse")))
+#   define SDL_SSE2_TARGET   __attribute__((target("sse2")))
+#   define SDL_SSE3_TARGET   __attribute__((target("sse3")))
+#   define SDL_AVX_TARGET    __attribute__((target("avx")))
+# endif
+#elif defined __GNUC__
+# if (__GNUC__ < 4) || (__GNUC__ == 4 && __GNUC_MINOR__ < 9)
+#   undef HAVE_AVX_INTRINSICS
+# endif
+#endif
+
+/* MSVC will always accept AVX intrinsics when compiling for x64 */
+#if defined(__clang__) || defined(__GNUC__)
+#define SDL_MMX_TARGET    __attribute__((target("mmx")))
+#define SDL_3DNOW_TARGET  __attribute__((target("3dnow")))
+#define SDL_SSE_TARGET    __attribute__((target("sse")))
+#define SDL_SSE2_TARGET   __attribute__((target("sse2")))
+#define SDL_SSE3_TARGET   __attribute__((target("sse3")))
+#define SDL_AVX_TARGET    __attribute__((target("avx")))
+#endif
+
 /* altivec.h redefining bool causes a number of problems, see bugs 3993 and 4392, so you need to explicitly define SDL_ENABLE_ALTIVEC_H to have it included. */
 #if defined(HAVE_ALTIVEC_H) && defined(__ALTIVEC__) && !defined(__APPLE_ALTIVEC__) && defined(SDL_ENABLE_ALTIVEC_H)
 #include <altivec.h>
 #endif
-#if !defined(SDL_DISABLE_ARM_NEON_H)
-#  if defined(__ARM_NEON)
-#    include <arm_neon.h>
-#  elif defined(__WINDOWS__) || defined(__WINRT__)
-/* Visual Studio doesn't define __ARM_ARCH, but _M_ARM (if set, always 7), and _M_ARM64 (if set, always 1). */
-#    if defined(_M_ARM)
-#      include <armintr.h>
-#      include <arm_neon.h>
-#      define __ARM_NEON 1 /* Set __ARM_NEON so that it can be used elsewhere, at compile time */
-#    endif
-#    if defined (_M_ARM64)
-#      include <arm64intr.h>
-#      include <arm64_neon.h>
-#      define __ARM_NEON 1 /* Set __ARM_NEON so that it can be used elsewhere, at compile time */
-#    endif
-#  endif
+#if !defined(SDL_DISABLE_ARM_NEON_H) && defined(__ARM_NEON)
+#include <arm_neon.h>
 #endif
-#endif /* compiler version */
-
+#if defined(__MINGW64_VERSION_MAJOR)
+#include <intrin.h>
+#else
 #if defined(__3dNOW__) && !defined(SDL_DISABLE_MM3DNOW_H)
 #include <mm3dnow.h>
 #endif
 #if defined(HAVE_IMMINTRIN_H) && !defined(SDL_DISABLE_IMMINTRIN_H)
 #include <immintrin.h>
 #else
-#if defined(__MMX__) && !defined(SDL_DISABLE_MMINTRIN_H)
+#if defined(HAVE_MMX_INTRINSICS) && !defined(SDL_DISABLE_MMINTRIN_H)
 #include <mmintrin.h>
 #endif
-#if defined(__SSE__) && !defined(SDL_DISABLE_XMMINTRIN_H)
+#if defined(HAVE_SSE_INTRINSICS) && !defined(SDL_DISABLE_XMMINTRIN_H)
 #include <xmmintrin.h>
 #endif
-#if defined(__SSE2__) && !defined(SDL_DISABLE_EMMINTRIN_H)
+#if defined(HAVE_SSE2_INTRINSICS) && !defined(SDL_DISABLE_EMMINTRIN_H)
 #include <emmintrin.h>
 #endif
-#if defined(__SSE3__) && !defined(SDL_DISABLE_PMMINTRIN_H)
+#if defined(HAVE_SSE3_INTRINSICS) && !defined(SDL_DISABLE_PMMINTRIN_H)
 #include <pmmintrin.h>
 #endif
 #endif /* HAVE_IMMINTRIN_H */
+#endif /* __MINGW64_VERSION_MAJOR */
+
+#endif
+
+#ifndef SDL_ALTIVEC_TARGET
+#define SDL_ALTIVEC_TARGET
+#endif
+#ifndef SDL_NEON_TARGET
+#define SDL_NEON_TARGET
+#endif
+#ifndef SDL_MMX_TARGET
+#define SDL_MMX_TARGET
+#endif
+#ifndef SDL_3DNOW_TARGET
+#define SDL_3DNOW_TARGET
+#endif
+#ifndef SDL_SSE_TARGET
+#define SDL_SSE_TARGET
+#endif
+#ifndef SDL_SSE2_TARGET
+#define SDL_SSE2_TARGET
+#endif
+#ifndef SDL_SSE3_TARGET
+#define SDL_SSE3_TARGET
+#endif
+#ifndef SDL_AVX_TARGET
+#define SDL_AVX_TARGET
+#endif
 
 #endif /* SDL_intrin_h_ */
 

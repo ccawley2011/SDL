@@ -120,7 +120,7 @@ GetL3CacheSize(void)
     : vec_add(vec_lvsl(8, src), vec_splat_u8(8)))
 
 /* Calculate the permute vector used for 32->32 swizzling */
-static vector unsigned char
+SDL_ALTIVEC_TARGET static vector unsigned char
 calc_swizzle32(const SDL_PixelFormat * srcfmt, const SDL_PixelFormat * dstfmt)
 {
     /*
@@ -177,7 +177,7 @@ calc_swizzle32(const SDL_PixelFormat * srcfmt, const SDL_PixelFormat * dstfmt)
 
 #if defined(__powerpc__) && (SDL_BYTEORDER == SDL_LIL_ENDIAN)
 /* reorder bytes for PowerPC little endian */
-static vector unsigned char reorder_ppc64le_vec(vector unsigned char vpermute)
+SDL_ALTIVEC_TARGET static vector unsigned char reorder_ppc64le_vec(vector unsigned char vpermute)
 {
     /* The result vector of calc_swizzle32 reorder bytes using vec_perm.
        The LE transformation for vec_perm has an implicit assumption
@@ -204,7 +204,7 @@ static vector unsigned char reorder_ppc64le_vec(vector unsigned char vpermute)
 #endif
 
 static void Blit_RGB888_RGB565(SDL_BlitInfo * info);
-static void
+SDL_ALTIVEC_TARGET static void
 Blit_RGB888_RGB565Altivec(SDL_BlitInfo * info)
 {
     int height = info->dst_h;
@@ -308,7 +308,7 @@ Blit_RGB888_RGB565Altivec(SDL_BlitInfo * info)
 
 }
 
-static void
+SDL_ALTIVEC_TARGET static void
 Blit_RGB565_32Altivec(SDL_BlitInfo * info)
 {
     int height = info->dst_h;
@@ -455,7 +455,7 @@ Blit_RGB565_32Altivec(SDL_BlitInfo * info)
 }
 
 
-static void
+SDL_ALTIVEC_TARGET static void
 Blit_RGB555_32Altivec(SDL_BlitInfo * info)
 {
     int height = info->dst_h;
@@ -603,7 +603,7 @@ Blit_RGB555_32Altivec(SDL_BlitInfo * info)
 
 static void BlitNtoNKey(SDL_BlitInfo * info);
 static void BlitNtoNKeyCopyAlpha(SDL_BlitInfo * info);
-static void
+SDL_ALTIVEC_TARGET static void
 Blit32to32KeyAltivec(SDL_BlitInfo * info)
 {
     int height = info->dst_h;
@@ -725,7 +725,7 @@ Blit32to32KeyAltivec(SDL_BlitInfo * info)
 
 /* Altivec code to swizzle one 32-bit surface to a different 32-bit format. */
 /* Use this on a G5 */
-static void
+SDL_ALTIVEC_TARGET static void
 ConvertAltivec32to32_noprefetch(SDL_BlitInfo * info)
 {
     int height = info->dst_h;
@@ -809,7 +809,7 @@ ConvertAltivec32to32_noprefetch(SDL_BlitInfo * info)
 
 /* Altivec code to swizzle one 32-bit surface to a different 32-bit format. */
 /* Use this on a G4 */
-static void
+SDL_ALTIVEC_TARGET static void
 ConvertAltivec32to32_prefetch(SDL_BlitInfo * info)
 {
     const int scalar_dst_lead = sizeof(Uint32) * 4;

@@ -25,14 +25,6 @@
 #include "SDL_cpuinfo.h"
 #include "SDL_intrin.h"
 
-#ifdef __ARM_NEON
-#define HAVE_NEON_INTRINSICS 1
-#endif
-
-#ifdef __SSE2__
-#define HAVE_SSE2_INTRINSICS 1
-#endif
-
 #if defined(__x86_64__) && HAVE_SSE2_INTRINSICS
 #define NEED_SCALAR_CONVERTER_FALLBACKS 0  /* x86_64 guarantees SSE2. */
 #elif __MACOSX__ && HAVE_SSE2_INTRINSICS
@@ -293,7 +285,7 @@ SDL_Convert_F32_to_S32_Scalar(SDL_AudioCVT *cvt, SDL_AudioFormat format)
 
 
 #if HAVE_SSE2_INTRINSICS
-static void SDLCALL
+SDL_SSE2_TARGET static void SDLCALL
 SDL_Convert_S8_to_F32_SSE2(SDL_AudioCVT *cvt, SDL_AudioFormat format)
 {
     const Sint8 *src = ((const Sint8 *) (cvt->buf + cvt->len_cvt)) - 1;
@@ -352,7 +344,7 @@ SDL_Convert_S8_to_F32_SSE2(SDL_AudioCVT *cvt, SDL_AudioFormat format)
     }
 }
 
-static void SDLCALL
+SDL_SSE2_TARGET static void SDLCALL
 SDL_Convert_U8_to_F32_SSE2(SDL_AudioCVT *cvt, SDL_AudioFormat format)
 {
     const Uint8 *src = ((const Uint8 *) (cvt->buf + cvt->len_cvt)) - 1;
@@ -413,7 +405,7 @@ SDL_Convert_U8_to_F32_SSE2(SDL_AudioCVT *cvt, SDL_AudioFormat format)
     }
 }
 
-static void SDLCALL
+SDL_SSE2_TARGET static void SDLCALL
 SDL_Convert_S16_to_F32_SSE2(SDL_AudioCVT *cvt, SDL_AudioFormat format)
 {
     const Sint16 *src = ((const Sint16 *) (cvt->buf + cvt->len_cvt)) - 1;
@@ -461,7 +453,7 @@ SDL_Convert_S16_to_F32_SSE2(SDL_AudioCVT *cvt, SDL_AudioFormat format)
     }
 }
 
-static void SDLCALL
+SDL_SSE2_TARGET static void SDLCALL
 SDL_Convert_U16_to_F32_SSE2(SDL_AudioCVT *cvt, SDL_AudioFormat format)
 {
     const Uint16 *src = ((const Uint16 *) (cvt->buf + cvt->len_cvt)) - 1;
@@ -510,7 +502,7 @@ SDL_Convert_U16_to_F32_SSE2(SDL_AudioCVT *cvt, SDL_AudioFormat format)
     }
 }
 
-static void SDLCALL
+SDL_SSE2_TARGET static void SDLCALL
 SDL_Convert_S32_to_F32_SSE2(SDL_AudioCVT *cvt, SDL_AudioFormat format)
 {
     const Sint32 *src = (const Sint32 *) cvt->buf;
@@ -550,7 +542,7 @@ SDL_Convert_S32_to_F32_SSE2(SDL_AudioCVT *cvt, SDL_AudioFormat format)
     }
 }
 
-static void SDLCALL
+SDL_SSE2_TARGET static void SDLCALL
 SDL_Convert_F32_to_S8_SSE2(SDL_AudioCVT *cvt, SDL_AudioFormat format)
 {
     const float *src = (const float *) cvt->buf;
@@ -610,7 +602,7 @@ SDL_Convert_F32_to_S8_SSE2(SDL_AudioCVT *cvt, SDL_AudioFormat format)
     }
 }
 
-static void SDLCALL
+SDL_SSE2_TARGET static void SDLCALL
 SDL_Convert_F32_to_U8_SSE2(SDL_AudioCVT *cvt, SDL_AudioFormat format)
 {
     const float *src = (const float *) cvt->buf;
@@ -670,7 +662,7 @@ SDL_Convert_F32_to_U8_SSE2(SDL_AudioCVT *cvt, SDL_AudioFormat format)
     }
 }
 
-static void SDLCALL
+SDL_SSE2_TARGET static void SDLCALL
 SDL_Convert_F32_to_S16_SSE2(SDL_AudioCVT *cvt, SDL_AudioFormat format)
 {
     const float *src = (const float *) cvt->buf;
@@ -728,7 +720,7 @@ SDL_Convert_F32_to_S16_SSE2(SDL_AudioCVT *cvt, SDL_AudioFormat format)
     }
 }
 
-static void SDLCALL
+SDL_SSE2_TARGET static void SDLCALL
 SDL_Convert_F32_to_U16_SSE2(SDL_AudioCVT *cvt, SDL_AudioFormat format)
 {
     const float *src = (const float *) cvt->buf;
@@ -794,7 +786,7 @@ SDL_Convert_F32_to_U16_SSE2(SDL_AudioCVT *cvt, SDL_AudioFormat format)
     }
 }
 
-static void SDLCALL
+SDL_SSE2_TARGET static void SDLCALL
 SDL_Convert_F32_to_S32_SSE2(SDL_AudioCVT *cvt, SDL_AudioFormat format)
 {
     const float *src = (const float *) cvt->buf;
@@ -852,7 +844,7 @@ SDL_Convert_F32_to_S32_SSE2(SDL_AudioCVT *cvt, SDL_AudioFormat format)
 
 
 #if HAVE_NEON_INTRINSICS
-static void SDLCALL
+SDL_NEON_TARGET static void SDLCALL
 SDL_Convert_S8_to_F32_NEON(SDL_AudioCVT *cvt, SDL_AudioFormat format)
 {
     const Sint8 *src = ((const Sint8 *) (cvt->buf + cvt->len_cvt)) - 1;
@@ -903,7 +895,7 @@ SDL_Convert_S8_to_F32_NEON(SDL_AudioCVT *cvt, SDL_AudioFormat format)
     }
 }
 
-static void SDLCALL
+SDL_NEON_TARGET static void SDLCALL
 SDL_Convert_U8_to_F32_NEON(SDL_AudioCVT *cvt, SDL_AudioFormat format)
 {
     const Uint8 *src = ((const Uint8 *) (cvt->buf + cvt->len_cvt)) - 1;
@@ -955,7 +947,7 @@ SDL_Convert_U8_to_F32_NEON(SDL_AudioCVT *cvt, SDL_AudioFormat format)
     }
 }
 
-static void SDLCALL
+SDL_NEON_TARGET static void SDLCALL
 SDL_Convert_S16_to_F32_NEON(SDL_AudioCVT *cvt, SDL_AudioFormat format)
 {
     const Sint16 *src = ((const Sint16 *) (cvt->buf + cvt->len_cvt)) - 1;
@@ -999,7 +991,7 @@ SDL_Convert_S16_to_F32_NEON(SDL_AudioCVT *cvt, SDL_AudioFormat format)
     }
 }
 
-static void SDLCALL
+SDL_NEON_TARGET static void SDLCALL
 SDL_Convert_U16_to_F32_NEON(SDL_AudioCVT *cvt, SDL_AudioFormat format)
 {
     const Uint16 *src = ((const Uint16 *) (cvt->buf + cvt->len_cvt)) - 1;
@@ -1044,7 +1036,7 @@ SDL_Convert_U16_to_F32_NEON(SDL_AudioCVT *cvt, SDL_AudioFormat format)
     }
 }
 
-static void SDLCALL
+SDL_NEON_TARGET static void SDLCALL
 SDL_Convert_S32_to_F32_NEON(SDL_AudioCVT *cvt, SDL_AudioFormat format)
 {
     const Sint32 *src = (const Sint32 *) cvt->buf;
@@ -1084,7 +1076,7 @@ SDL_Convert_S32_to_F32_NEON(SDL_AudioCVT *cvt, SDL_AudioFormat format)
     }
 }
 
-static void SDLCALL
+SDL_NEON_TARGET static void SDLCALL
 SDL_Convert_F32_to_S8_NEON(SDL_AudioCVT *cvt, SDL_AudioFormat format)
 {
     const float *src = (const float *) cvt->buf;
@@ -1146,7 +1138,7 @@ SDL_Convert_F32_to_S8_NEON(SDL_AudioCVT *cvt, SDL_AudioFormat format)
     }
 }
 
-static void SDLCALL
+SDL_NEON_TARGET static void SDLCALL
 SDL_Convert_F32_to_U8_NEON(SDL_AudioCVT *cvt, SDL_AudioFormat format)
 {
     const float *src = (const float *) cvt->buf;
@@ -1209,7 +1201,7 @@ SDL_Convert_F32_to_U8_NEON(SDL_AudioCVT *cvt, SDL_AudioFormat format)
     }
 }
 
-static void SDLCALL
+SDL_NEON_TARGET static void SDLCALL
 SDL_Convert_F32_to_S16_NEON(SDL_AudioCVT *cvt, SDL_AudioFormat format)
 {
     const float *src = (const float *) cvt->buf;
@@ -1267,7 +1259,7 @@ SDL_Convert_F32_to_S16_NEON(SDL_AudioCVT *cvt, SDL_AudioFormat format)
     }
 }
 
-static void SDLCALL
+SDL_NEON_TARGET static void SDLCALL
 SDL_Convert_F32_to_U16_NEON(SDL_AudioCVT *cvt, SDL_AudioFormat format)
 {
     const float *src = (const float *) cvt->buf;
@@ -1325,7 +1317,7 @@ SDL_Convert_F32_to_U16_NEON(SDL_AudioCVT *cvt, SDL_AudioFormat format)
     }
 }
 
-static void SDLCALL
+SDL_NEON_TARGET static void SDLCALL
 SDL_Convert_F32_to_S32_NEON(SDL_AudioCVT *cvt, SDL_AudioFormat format)
 {
     const float *src = (const float *) cvt->buf;

@@ -344,29 +344,20 @@ scale_mat(const Uint32 *src, int src_w, int src_h, int src_pitch,
     return 0;
 }
 
-#if defined(__SSE2__)
-#  define HAVE_SSE2_INTRINSICS 1
-#endif
-
-#if defined(__ARM_NEON)
-#  define HAVE_NEON_INTRINSICS 1
-#  define CAST_uint8x8_t  (uint8x8_t)
-#  define CAST_uint32x2_t (uint32x2_t)
-#endif
-
-#if defined(__WINRT__) || defined(_MSC_VER)
-#  if defined(HAVE_NEON_INTRINSICS)
-#    undef CAST_uint8x8_t
-#    undef CAST_uint32x2_t
+#if defined(HAVE_NEON_INTRINSICS)
+#  if defined(__WINRT__) || defined(_MSC_VER)
 #    define CAST_uint8x8_t
 #    define CAST_uint32x2_t
+#  else
+#    define CAST_uint8x8_t  (uint8x8_t)
+#    define CAST_uint32x2_t (uint32x2_t)
 #  endif
 #endif
 
 #if defined(HAVE_SSE2_INTRINSICS)
 
 #if 0
-static void
+SDL_SSE2_TARGET static void
 printf_128(const char *str, __m128i var)
 {
     uint16_t *val = (uint16_t*) &var;
@@ -386,7 +377,7 @@ hasSSE2()
     return val;
 }
 
-static SDL_INLINE void
+SDL_SSE2_TARGET static SDL_INLINE void
 INTERPOL_BILINEAR_SSE(const Uint32 *s0, const Uint32 *s1, int frac_w, __m128i v_frac_h0, __m128i v_frac_h1, Uint32 *dst, __m128i zero)
 {
     __m128i x_00_01, x_10_11; /* Pixels in 4*uint8 in row */
@@ -425,7 +416,7 @@ INTERPOL_BILINEAR_SSE(const Uint32 *s0, const Uint32 *s1, int frac_w, __m128i v_
     *dst = _mm_cvtsi128_si32(e0);
 }
 
-static int
+SDL_SSE2_TARGET static int
 scale_mat_SSE(const Uint32 *src, int src_w, int src_h, int src_pitch, Uint32 *dst, int dst_w, int dst_h, int dst_pitch)
 {
     BILINEAR___START
@@ -559,7 +550,7 @@ hasNEON()
     return val;
 }
 
-static SDL_INLINE void
+SDL_NEON_TARGET static SDL_INLINE void
 INTERPOL_BILINEAR_NEON(const Uint32 *s0, const Uint32 *s1, int frac_w, uint8x8_t v_frac_h0, uint8x8_t v_frac_h1, Uint32 *dst)
 {
     uint8x8_t x_00_01, x_10_11; /* Pixels in 4*uint8 in row */
@@ -594,7 +585,7 @@ INTERPOL_BILINEAR_NEON(const Uint32 *s0, const Uint32 *s1, int frac_w, uint8x8_t
 }
 
     static int
-scale_mat_NEON(const Uint32 *src, int src_w, int src_h, int src_pitch, Uint32 *dst, int dst_w, int dst_h, int dst_pitch)
+SDL_NEON_TARGET scale_mat_NEON(const Uint32 *src, int src_w, int src_h, int src_pitch, Uint32 *dst, int dst_w, int dst_h, int dst_pitch)
 {
     BILINEAR___START
 

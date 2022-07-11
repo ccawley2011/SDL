@@ -36,37 +36,9 @@
 
 #define DEBUG_AUDIOSTREAM 0
 
-#ifdef __ARM_NEON
-#define HAVE_NEON_INTRINSICS 1
-#endif
-
-#ifdef __SSE__
-#define HAVE_SSE_INTRINSICS 1
-#endif
-
-#ifdef __SSE3__
-#define HAVE_SSE3_INTRINSICS 1
-#endif
-
-#if defined(HAVE_IMMINTRIN_H) && !defined(SDL_DISABLE_IMMINTRIN_H)
-#define HAVE_AVX_INTRINSICS 1
-#endif
-#if defined __clang__
-# if (!__has_attribute(target))
-#   undef HAVE_AVX_INTRINSICS
-# endif
-# if (defined(_MSC_VER) || defined(__SCE__)) && !defined(__AVX__)
-#   undef HAVE_AVX_INTRINSICS
-# endif
-#elif defined __GNUC__
-# if (__GNUC__ < 4) || (__GNUC__ == 4 && __GNUC_MINOR__ < 9)
-#   undef HAVE_AVX_INTRINSICS
-# endif
-#endif
-
 #if HAVE_SSE3_INTRINSICS
 /* Convert from stereo to mono. Average left and right. */
-static void SDLCALL
+SDL_SSE3_TARGET static void SDLCALL
 SDL_ConvertStereoToMono_SSE3(SDL_AudioCVT * cvt, SDL_AudioFormat format)
 {
     const __m128 divby2 = _mm_set1_ps(0.5f);
@@ -120,12 +92,8 @@ SDL_ConvertStereoToMono(SDL_AudioCVT * cvt, SDL_AudioFormat format)
 }
 
 #if HAVE_AVX_INTRINSICS
-/* MSVC will always accept AVX intrinsics when compiling for x64 */
-#if defined(__clang__) || defined(__GNUC__)
-__attribute__((target("avx")))
-#endif
 /* Convert from 5.1 to stereo. Average left and right, distribute center, discard LFE. */
-static void SDLCALL
+SDL_AVX_TARGET static void SDLCALL
 SDL_Convert51ToStereo_AVX(SDL_AudioCVT * cvt, SDL_AudioFormat format)
 {
     float *dst = (float *) cvt->buf;
@@ -187,7 +155,7 @@ SDL_Convert51ToStereo_AVX(SDL_AudioCVT * cvt, SDL_AudioFormat format)
 
 #if HAVE_SSE_INTRINSICS
 /* Convert from 5.1 to stereo. Average left and right, distribute center, discard LFE. */
-static void SDLCALL
+SDL_SSE_TARGET static void SDLCALL
 SDL_Convert51ToStereo_SSE(SDL_AudioCVT * cvt, SDL_AudioFormat format)
 {
     float *dst = (float *) cvt->buf;
@@ -247,7 +215,7 @@ SDL_Convert51ToStereo_SSE(SDL_AudioCVT * cvt, SDL_AudioFormat format)
 
 #if HAVE_NEON_INTRINSICS
 /* Convert from 5.1 to stereo. Average left and right, distribute center, discard LFE. */
-static void SDLCALL
+SDL_NEON_TARGET static void SDLCALL
 SDL_Convert51ToStereo_NEON(SDL_AudioCVT * cvt, SDL_AudioFormat format)
 {
     float *dst = (float *) cvt->buf;
