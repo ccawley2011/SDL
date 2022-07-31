@@ -48,6 +48,14 @@
 #endif
 
 /* Function pointers set to a CPU-specific implementation. */
+SDL_AudioFilter SDL_Convert_S8_to_S32 = NULL;
+SDL_AudioFilter SDL_Convert_S8_to_S16 = NULL;
+SDL_AudioFilter SDL_Convert_U8_to_U16 = NULL;
+SDL_AudioFilter SDL_Convert_S16_to_S32 = NULL;
+SDL_AudioFilter SDL_Convert_S16_to_S8 = NULL;
+SDL_AudioFilter SDL_Convert_U16_to_U8 = NULL;
+SDL_AudioFilter SDL_Convert_S32_to_S16 = NULL;
+SDL_AudioFilter SDL_Convert_S32_to_S8 = NULL;
 SDL_AudioFilter SDL_Convert_S8_to_F32 = NULL;
 SDL_AudioFilter SDL_Convert_U8_to_F32 = NULL;
 SDL_AudioFilter SDL_Convert_S16_to_F32 = NULL;
@@ -64,6 +72,158 @@ SDL_AudioFilter SDL_Convert_F32_to_S32 = NULL;
 #define DIVBY32768 0.000030517578125f
 #define DIVBY8388607 0.00000011920930376163766f
 
+
+static void SDLCALL
+SDL_Convert_S8_to_S32_Scalar(SDL_AudioCVT * cvt, SDL_AudioFormat format)
+{
+    const Sint8 *src = ((const Sint8 *) (cvt->buf + cvt->len_cvt)) - 1;
+    Sint32 *dst = ((Sint32 *) (cvt->buf + cvt->len_cvt * 4)) - 1;
+    int i;
+
+    LOG_DEBUG_CONVERT("AUDIO_S8", "AUDIO_S32");
+
+    for (i = cvt->len_cvt / sizeof (Sint8); i; --i, --src, --dst) {
+        *dst = ((Sint32) *src) << 24;
+    }
+
+    cvt->len_cvt *= 4;
+    if (cvt->filters[++cvt->filter_index]) {
+        cvt->filters[cvt->filter_index] (cvt, AUDIO_S32SYS);
+    }
+}
+
+static void SDLCALL
+SDL_Convert_S8_to_S16_Scalar(SDL_AudioCVT * cvt, SDL_AudioFormat format)
+{
+    const Sint8 *src = ((const Sint8 *) (cvt->buf + cvt->len_cvt)) - 1;
+    Sint16 *dst = ((Sint16 *) (cvt->buf + cvt->len_cvt * 2)) - 1;
+    int i;
+
+    LOG_DEBUG_CONVERT("AUDIO_S8", "AUDIO_S16");
+
+    for (i = cvt->len_cvt / sizeof (Sint8); i; --i, --src, --dst) {
+        *dst = ((Sint16) *src) << 8;
+    }
+
+    cvt->len_cvt *= 2;
+    if (cvt->filters[++cvt->filter_index]) {
+        cvt->filters[cvt->filter_index] (cvt, AUDIO_S16SYS);
+    }
+}
+
+static void SDLCALL
+SDL_Convert_U8_to_U16_Scalar(SDL_AudioCVT * cvt, SDL_AudioFormat format)
+{
+    const Uint8 *src = ((const Uint8 *) (cvt->buf + cvt->len_cvt)) - 1;
+    Uint16 *dst = ((Uint16 *) (cvt->buf + cvt->len_cvt * 2)) - 1;
+    int i;
+
+    LOG_DEBUG_CONVERT("AUDIO_U8", "AUDIO_U16");
+
+    for (i = cvt->len_cvt / sizeof (Uint8); i; --i, --src, --dst) {
+        *dst = ((Uint16) *src) << 8;
+    }
+
+    cvt->len_cvt *= 2;
+    if (cvt->filters[++cvt->filter_index]) {
+        cvt->filters[cvt->filter_index] (cvt, AUDIO_U16SYS);
+    }
+}
+
+static void SDLCALL
+SDL_Convert_S16_to_S32_Scalar(SDL_AudioCVT * cvt, SDL_AudioFormat format)
+{
+    const Sint16 *src = ((const Sint16 *) (cvt->buf + cvt->len_cvt)) - 1;
+    Sint32 *dst = ((Sint32 *) (cvt->buf + cvt->len_cvt * 2)) - 1;
+    int i;
+
+    LOG_DEBUG_CONVERT("AUDIO_S16", "AUDIO_S32");
+
+    for (i = cvt->len_cvt / sizeof (Sint16); i; --i, --src, --dst) {
+        *dst = ((Sint32) *src) << 16;
+    }
+
+    cvt->len_cvt *= 2;
+    if (cvt->filters[++cvt->filter_index]) {
+        cvt->filters[cvt->filter_index] (cvt, AUDIO_S32SYS);
+    }
+}
+
+static void SDLCALL
+SDL_Convert_S16_to_S8_Scalar(SDL_AudioCVT * cvt, SDL_AudioFormat format)
+{
+    const Sint16 *src = (const Sint16 *) cvt->buf;
+    Sint8 *dst = (Sint8 *) cvt->buf;
+    int i;
+
+    LOG_DEBUG_CONVERT("AUDIO_S16", "AUDIO_S8");
+
+    for (i = cvt->len_cvt / sizeof (Sint16); i; --i, ++src, ++dst) {
+        *dst = (Sint8) (*src >> 8);
+    }
+
+    cvt->len_cvt /= 2;
+    if (cvt->filters[++cvt->filter_index]) {
+        cvt->filters[cvt->filter_index] (cvt, AUDIO_S8);
+    }
+}
+
+static void SDLCALL
+SDL_Convert_U16_to_U8_Scalar(SDL_AudioCVT * cvt, SDL_AudioFormat format)
+{
+    const Uint16 *src = (const Uint16 *) cvt->buf;
+    Uint8 *dst = (Uint8 *) cvt->buf;
+    int i;
+
+    LOG_DEBUG_CONVERT("AUDIO_U16", "AUDIO_U8");
+
+    for (i = cvt->len_cvt / sizeof (Uint16); i; --i, ++src, ++dst) {
+        *dst = (Uint8) (*src >> 8);
+    }
+
+    cvt->len_cvt /= 2;
+    if (cvt->filters[++cvt->filter_index]) {
+        cvt->filters[cvt->filter_index] (cvt, AUDIO_U8);
+    }
+}
+
+static void SDLCALL
+SDL_Convert_S32_to_S8_Scalar(SDL_AudioCVT * cvt, SDL_AudioFormat format)
+{
+    const Sint32 *src = (const Sint32 *) cvt->buf;
+    Sint8 *dst = (Sint8 *) cvt->buf;
+    int i;
+
+    LOG_DEBUG_CONVERT("AUDIO_S32", "AUDIO_S8");
+
+    for (i = cvt->len_cvt / sizeof (Sint32); i; --i, ++src, ++dst) {
+        *dst = (Sint8) (*src >> 24);
+    }
+
+    cvt->len_cvt /= 4;
+    if (cvt->filters[++cvt->filter_index]) {
+        cvt->filters[cvt->filter_index] (cvt, AUDIO_S8);
+    }
+}
+
+static void SDLCALL
+SDL_Convert_S32_to_S16_Scalar(SDL_AudioCVT * cvt, SDL_AudioFormat format)
+{
+    const Sint32 *src = (const Sint32 *) cvt->buf;
+    Sint16 *dst = (Sint16 *) cvt->buf;
+    int i;
+
+    LOG_DEBUG_CONVERT("AUDIO_S32", "AUDIO_S16");
+
+    for (i = cvt->len_cvt / sizeof (Sint32); i; --i, ++src, ++dst) {
+        *dst = (Sint16) (*src >> 16);
+    }
+
+    cvt->len_cvt /= 2;
+    if (cvt->filters[++cvt->filter_index]) {
+        cvt->filters[cvt->filter_index] (cvt, AUDIO_S16SYS);
+    }
+}
 
 #if NEED_SCALAR_CONVERTER_FALLBACKS
 static void SDLCALL
@@ -1390,6 +1550,16 @@ void SDL_ChooseAudioConverters(void)
         return;
     }
 
+#define SET_INTEGER_CONVERTER_FUNCS(fntype) \
+        SDL_Convert_S8_to_S32 = SDL_Convert_S8_to_S32_##fntype; \
+        SDL_Convert_S8_to_S16 = SDL_Convert_S8_to_S16_##fntype; \
+        SDL_Convert_U8_to_U16 = SDL_Convert_U8_to_U16_##fntype; \
+        SDL_Convert_S16_to_S32 = SDL_Convert_S16_to_S32_##fntype; \
+        SDL_Convert_S16_to_S8 = SDL_Convert_S16_to_S8_##fntype; \
+        SDL_Convert_U16_to_U8 = SDL_Convert_U16_to_U8_##fntype; \
+        SDL_Convert_S32_to_S16 = SDL_Convert_S32_to_S16_##fntype; \
+        SDL_Convert_S32_to_S8 = SDL_Convert_S32_to_S8_##fntype; \
+
 #define SET_CONVERTER_FUNCS(fntype) \
         SDL_Convert_S8_to_F32 = SDL_Convert_S8_to_F32_##fntype; \
         SDL_Convert_U8_to_F32 = SDL_Convert_U8_to_F32_##fntype; \
@@ -1402,6 +1572,9 @@ void SDL_ChooseAudioConverters(void)
         SDL_Convert_F32_to_U16 = SDL_Convert_F32_to_U16_##fntype; \
         SDL_Convert_F32_to_S32 = SDL_Convert_F32_to_S32_##fntype; \
         converters_chosen = SDL_TRUE
+
+    /* TODO: Add SSE2 and NEON versions of these functions? */
+    SET_INTEGER_CONVERTER_FUNCS(Scalar);
 
 #if HAVE_SSE2_INTRINSICS
     if (SDL_HasSSE2()) {
