@@ -422,6 +422,7 @@ set_option(SDL_SSE                 "Use SSE assembly routines" ${OPT_DEF_ASM})
 set_option(SDL_SSE2                "Use SSE2 assembly routines" ${OPT_DEF_SSEMATH})
 set_option(SDL_SSE3                "Use SSE3 assembly routines" ${OPT_DEF_SSEMATH})
 set_option(SDL_ALTIVEC             "Use Altivec assembly routines" ${OPT_DEF_ASM})
+set_option(SDL_ARMV4               "use ARMv4 assembly blitters on ARM" OFF)
 set_option(SDL_ARMSIMD             "use SIMD assembly blitters on ARM" OFF)
 set_option(SDL_ARMNEON             "use NEON assembly blitters on ARM" OFF)
 set_option(SDL_DISKAUDIO           "Support the disk writer audio driver" ON)
@@ -816,6 +817,31 @@ if(SDL_ASSEMBLY)
         if(HAVE_ALTIVEC_H_HDR)
           set(HAVE_ALTIVEC_H 1)
         endif()
+      endif()
+    endif()
+
+    if(SDL_ARMV4)
+      set(ORIG_CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
+      set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -x assembler-with-cpp")
+      check_c_source_compiles("
+        .text
+        .arch armv4
+        .object_arch armv4
+        .arm
+        .altmacro
+        #ifndef __ARM_EABI__
+        #error EABI is required (to be sure that calling conventions are compatible)
+        #endif
+        mov r0, r0
+      " ARMV4_FOUND)
+      set(CMAKE_REQUIRED_FLAGS "${ORIG_CMAKE_REQUIRED_FLAGS}")
+
+      if(ARMV4_FOUND)
+        set(HAVE_ARMV4 TRUE)
+        set(SDL_ARM_V4_BLITTERS 1)
+        file(GLOB ARMV4_SOURCES ${SDL2_SOURCE_DIR}/src/video/arm/pixman-arm-v4*.S)
+        list(APPEND SOURCE_FILES ${ARMV4_SOURCES})
+        set(WARN_ABOUT_ARM_V4_ASM_MIT TRUE)
       endif()
     endif()
 
@@ -2452,6 +2478,11 @@ elseif(VITA)
     endif()
   endif()
 
+#  set(HAVE_ARMV4 TRUE)
+#  set(SDL_ARM_V4_BLITTERS 1)
+#  file(GLOB ARMV4_SOURCES ${SDL2_SOURCE_DIR}/src/video/arm/pixman-arm-v4*.S)
+#  list(APPEND SOURCE_FILES ${ARMV4_SOURCES})
+
 #  set(HAVE_ARMSIMD TRUE)
 #  set(SDL_ARM_SIMD_BLITTERS 1)
 #  file(GLOB ARMSIMD_SOURCES ${SDL2_SOURCE_DIR}/src/video/arm/pixman-arm-simd*.S)
@@ -2975,6 +3006,15 @@ if(UNIX)
   message(STATUS "were installed, then make sure you have set the")
   message(STATUS "CFLAGS and LDFLAGS environment variables correctly.")
   message(STATUS "")
+endif()
+
+if(WARN_ABOUT_ARM_V4_ASM_MIT)
+  message(STATUS "")
+  message(STATUS "SDL is being built with ARMv4 optimizations, which")
+  message(STATUS "uses code licensed under the MIT license. If this is a")
+  message(STATUS "problem, please disable that code by rerunning CMake with:")
+  message(STATUS "")
+  message(STATUS "    -DSDL_ARMV4=OFF")
 endif()
 
 if(WARN_ABOUT_ARM_SIMD_ASM_MIT)

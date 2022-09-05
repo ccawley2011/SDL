@@ -1430,8 +1430,43 @@ CheckLibSampleRate()
     fi
 }
 
-dnl Check for ARM instruction support using gas syntax
-CheckARM()
+dnl Check for ARMv4 instruction support using gas syntax
+CheckARMv4()
+{
+    AC_ARG_ENABLE(arm-v4,
+[AS_HELP_STRING([--enable-arm-v4], [use v4 assembly blitters on ARM [default=no]])],
+                  enable_arm_v4=$enableval, enable_arm_v4=no)
+    if test x$enable_video = xyes -a x$enable_assembly = xyes -a x$enable_arm_v4 = xyes; then
+        save_CFLAGS="$CFLAGS"
+        have_arm_v4=no
+        CFLAGS="-x assembler-with-cpp $CFLAGS"
+
+        AC_MSG_CHECKING(for ARMv4)
+        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
+        .text
+        .arch armv4
+        .object_arch armv4
+        .arm
+        .altmacro
+        #ifndef __ARM_EABI__
+        #error EABI is required (to be sure that calling conventions are compatible)
+        #endif
+        mov r0, r0
+        ]])], have_arm_v4=yes)
+        AC_MSG_RESULT($have_arm_v4)
+
+        CFLAGS="$save_CFLAGS"
+
+        if test x$have_arm_v4 = xyes; then
+            AC_DEFINE(SDL_ARM_V4_BLITTERS, 1, [ ])
+            SOURCES="$SOURCES $srcdir/src/video/arm/pixman-arm-v4*.S"
+            WARN_ABOUT_ARM_V4_ASM_MIT="yes"
+        fi
+    fi
+}
+
+dnl Check for ARM SIMD instruction support using gas syntax
+CheckARMSIMD()
 {
     AC_ARG_ENABLE(arm-simd,
 [AS_HELP_STRING([--enable-arm-simd], [use SIMD assembly blitters on ARM [default=no]])],
@@ -3749,7 +3784,8 @@ case "$host" in
         CheckDiskAudio
         CheckDummyAudio
         CheckDLOPEN
-        CheckARM
+        CheckARMv4
+        CheckARMSIMD
         CheckNEON
         CheckO_CLOEXEC
         CheckOSS
@@ -4905,6 +4941,13 @@ else
     SUMMARY="${SUMMARY}Using fcitx         : NO\n"
 fi
 
+if test x$WARN_ABOUT_ARM_V4_ASM_MIT = xyes; then
+    SUMMARY="${SUMMARY}\nSDL is being built with ARM v4 optimizations, which\n"
+    SUMMARY="${SUMMARY}uses code licensed under the MIT license. If this is a\n"
+    SUMMARY="${SUMMARY}problem, please disable that code by rerunning the\n"
+    SUMMARY="${SUMMARY}configure script with:\n"
+    SUMMARY="${SUMMARY}\n    --disable-arm-v4\n"
+fi
 if test x$WARN_ABOUT_ARM_SIMD_ASM_MIT = xyes; then
     SUMMARY="${SUMMARY}\nSDL is being built with ARM SIMD optimizations, which\n"
     SUMMARY="${SUMMARY}uses code licensed under the MIT license. If this is a\n"

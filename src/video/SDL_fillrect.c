@@ -274,23 +274,23 @@ static void fill_32_neon(Uint8 * pixels, int pitch, Uint32 color, int w, int h) 
 }
 #endif
 
-#if SDL_ARM_SIMD_BLITTERS
-void FillRect8ARMSIMDAsm(int32_t w, int32_t h, uint8_t *dst, int32_t dst_stride, uint8_t src);
-void FillRect16ARMSIMDAsm(int32_t w, int32_t h, uint16_t *dst, int32_t dst_stride, uint16_t src);
-void FillRect32ARMSIMDAsm(int32_t w, int32_t h, uint32_t *dst, int32_t dst_stride, uint32_t src);
+#if SDL_ARM_V4_BLITTERS
+void FillRect8ARMv4Asm(int32_t w, int32_t h, uint8_t *dst, int32_t dst_stride, uint8_t src);
+void FillRect16ARMv4Asm(int32_t w, int32_t h, uint16_t *dst, int32_t dst_stride, uint16_t src);
+void FillRect32ARMv4Asm(int32_t w, int32_t h, uint32_t *dst, int32_t dst_stride, uint32_t src);
 
-static void fill_8_simd(Uint8 * pixels, int pitch, Uint32 color, int w, int h) {
-    FillRect8ARMSIMDAsm(w, h, (uint8_t *) pixels, pitch >> 0, color);
+static void fill_8_armv4(Uint8 * pixels, int pitch, Uint32 color, int w, int h) {
+    FillRect8ARMv4Asm(w, h, (uint8_t *) pixels, pitch >> 0, color);
     return;
 }
 
-static void fill_16_simd(Uint8 * pixels, int pitch, Uint32 color, int w, int h) {
-    FillRect16ARMSIMDAsm(w, h, (uint16_t *) pixels, pitch >> 1, color);
+static void fill_16_armv4(Uint8 * pixels, int pitch, Uint32 color, int w, int h) {
+    FillRect16ARMv4Asm(w, h, (uint16_t *) pixels, pitch >> 1, color);
     return;
 }
 
-static void fill_32_simd(Uint8 * pixels, int pitch, Uint32 color, int w, int h) {
-    FillRect32ARMSIMDAsm(w, h, (uint32_t *) pixels, pitch >> 2, color);
+static void fill_32_armv4(Uint8 * pixels, int pitch, Uint32 color, int w, int h) {
+    FillRect32ARMv4Asm(w, h, (uint32_t *) pixels, pitch >> 2, color);
     return;
 }
 #endif
@@ -355,17 +355,17 @@ SDL_FillRects(SDL_Surface * dst, const SDL_Rect * rects, int count,
         }
     }
 #endif
-#if SDL_ARM_SIMD_BLITTERS
-    if (SDL_HasARMSIMD() && dst->format->BytesPerPixel != 3 && fill_function == NULL) {
+#if SDL_ARM_V4_BLITTERS
+    if (SDL_HasARMv4() && dst->format->BytesPerPixel != 3 && fill_function == NULL) {
         switch (dst->format->BytesPerPixel) {
         case 1:
-            fill_function = fill_8_simd;
+            fill_function = fill_8_armv4;
             break;
         case 2:
-            fill_function = fill_16_simd;
+            fill_function = fill_16_armv4;
             break;
         case 4:
-            fill_function = fill_32_simd;
+            fill_function = fill_32_armv4;
             break;
         }
     }
