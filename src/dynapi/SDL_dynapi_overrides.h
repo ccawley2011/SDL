@@ -878,3 +878,4 @@
 #define SDL_GDKGetTaskQueue SDL_GDKGetTaskQueue_REAL
 #define SDL_GDKRunApp SDL_GDKRunApp_REAL
 #define SDL_GetOriginalMemoryFunctions SDL_GetOriginalMemoryFunctions_REAL
+#define SDL_HasARMv4 SDL_HasARMv4_REAL

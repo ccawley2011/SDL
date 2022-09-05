@@ -416,6 +416,20 @@ extern DECLSPEC SDL_bool SDLCALL SDL_HasAVX2(void);
 extern DECLSPEC SDL_bool SDLCALL SDL_HasAVX512F(void);
 
 /**
+ * Determine whether the CPU has ARMv4 features.
+ *
+ * This always returns false on CPUs that aren't using ARM instruction sets.
+ *
+ * \returns SDL_TRUE if the CPU has ARMv4 features or SDL_FALSE if not.
+ *
+ * \since This function is available since SDL 2.26.0.
+ *
+ * \sa SDL_HasARMSIMD
+ * \sa SDL_HasNEON
+ */
+extern DECLSPEC SDL_bool SDLCALL SDL_HasARMv4(void);
+
+/**
  * Determine whether the CPU has ARM SIMD (ARMv6) features.
  *
  * This is different from ARM NEON, which is a different instruction set.
@@ -426,6 +440,7 @@ extern DECLSPEC SDL_bool SDLCALL SDL_HasAVX512F(void);
  *
  * \since This function is available since SDL 2.0.12.
  *
+ * \sa SDL_HasARMv4
  * \sa SDL_HasNEON
  */
 extern DECLSPEC SDL_bool SDLCALL SDL_HasARMSIMD(void);
@@ -438,6 +453,9 @@ extern DECLSPEC SDL_bool SDLCALL SDL_HasARMSIMD(void);
  * \returns SDL_TRUE if the CPU has ARM NEON features or SDL_FALSE if not.
  *
  * \since This function is available since SDL 2.0.6.
+ *
+ * \sa SDL_HasARMv4
+ * \sa SDL_HasARMSIMD
  */
 extern DECLSPEC SDL_bool SDLCALL SDL_HasNEON(void);
 

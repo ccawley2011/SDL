@@ -118,6 +118,7 @@
 #define CPU_HAS_ARM_SIMD (1 << 13)
 #define CPU_HAS_LSX     (1 << 14)
 #define CPU_HAS_LASX    (1 << 15)
+#define CPU_HAS_ARM_V4  (1 << 16)
 
 #define CPU_CFG2 0x2
 #define CPU_CFG2_LSX    (1 << 6)
@@ -355,6 +356,48 @@ CPU_haveAltiVec(void)
 #endif
     return altivec;
 }
+
+#if (defined(__ARM_ARCH) && (__ARM_ARCH >= 4)) || defined(__aarch64__)
+static int
+CPU_haveARMv4(void)
+{
+    return 1;
+}
+
+#elif !defined(__arm__)
+static int
+CPU_haveARMv4(void)
+{
+    return 0;
+}
+
+#elif defined(__RISCOS__)
+static int
+CPU_haveARMv4(void)
+{
+    _kernel_swi_regs regs;
+    regs.r[0] = 0;
+    if (_kernel_swi(OS_PlatformFeatures, &regs, &regs) != NULL)
+        return 0;
+
+    if (!(regs.r[0] & (1<<31)))
+        return 0;
+
+    regs.r[0] = 34;
+    regs.r[1] = 20;
+    if (_kernel_swi(OS_PlatformFeatures, &regs, &regs) != NULL)
+        return 0;
+    return regs.r[0];
+}
+
+#else
+static int
+CPU_haveARMv4(void)
+{
+#warning SDL_HasARMv4 is not implemented for this ARM platform. Write me.
+    return 0;
+}
+#endif
 
 #if (defined(__ARM_ARCH) && (__ARM_ARCH >= 6)) || defined(__aarch64__)
 static int
@@ -904,6 +947,9 @@ SDL_GetCPUFeatures(void)
             SDL_CPUFeatures |= CPU_HAS_AVX512F;
             SDL_SIMDAlignment = SDL_max(SDL_SIMDAlignment, 64);
         }
+        if (CPU_haveARMv4()) {
+            SDL_CPUFeatures |= CPU_HAS_ARM_V4;
+        }
         if (CPU_haveARMSIMD()) {
             SDL_CPUFeatures |= CPU_HAS_ARM_SIMD;
             SDL_SIMDAlignment = SDL_max(SDL_SIMDAlignment, 16);
@@ -995,6 +1041,12 @@ SDL_bool
 SDL_HasAVX512F(void)
 {
     return CPU_FEATURE_AVAILABLE(CPU_HAS_AVX512F);
+}
+
+SDL_bool
+SDL_HasARMv4(void)
+{
+    return CPU_FEATURE_AVAILABLE(CPU_HAS_ARM_V4);
 }
 
 SDL_bool
