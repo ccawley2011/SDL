@@ -10,11 +10,13 @@
 /* Test case functions */
 
 /* Definition of all RGB formats used to test pixel conversions */
-const int _numRGBPixelFormats = 31;
+const int _numRGBPixelFormats = 33;
 Uint32 _RGBPixelFormats[] =
   {
     SDL_PIXELFORMAT_INDEX1LSB,
     SDL_PIXELFORMAT_INDEX1MSB,
+    SDL_PIXELFORMAT_INDEX2LSB,
+    SDL_PIXELFORMAT_INDEX2MSB,
     SDL_PIXELFORMAT_INDEX4LSB,
     SDL_PIXELFORMAT_INDEX4MSB,
     SDL_PIXELFORMAT_INDEX8,
@@ -49,6 +51,8 @@ const char* _RGBPixelFormatsVerbose[] =
   {
     "SDL_PIXELFORMAT_INDEX1LSB",
     "SDL_PIXELFORMAT_INDEX1MSB",
+    "SDL_PIXELFORMAT_INDEX2LSB",
+    "SDL_PIXELFORMAT_INDEX2MSB",
     "SDL_PIXELFORMAT_INDEX4LSB",
     "SDL_PIXELFORMAT_INDEX4MSB",
     "SDL_PIXELFORMAT_INDEX8",

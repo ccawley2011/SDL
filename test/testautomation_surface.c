@@ -670,6 +670,34 @@ surface_testOverflow(void *arg)
                         surface != NULL ? "(success)" : SDL_GetError());
     SDL_FreeSurface(surface);
 
+    /* SDL_PIXELFORMAT_INDEX2* needs 1 byte per 4 pixels. */
+    surface = SDL_CreateRGBSurfaceWithFormatFrom(buf, 8, 1, 2, 2, SDL_PIXELFORMAT_INDEX2LSB);
+    SDLTest_AssertCheck(surface != NULL, "8px * 2 bits per px fits in 2 bytes: %s",
+                        surface != NULL ? "(success)" : SDL_GetError());
+    SDL_FreeSurface(surface);
+    surface = SDL_CreateRGBSurfaceFrom(buf, 8, 1, 2, 2, 0, 0, 0, 0);
+    SDLTest_AssertCheck(surface != NULL, "8px * 2 bits per px fits in 2 bytes: %s",
+                        surface != NULL ? "(success)" : SDL_GetError());
+    SDL_FreeSurface(surface);
+
+    surface = SDL_CreateRGBSurfaceWithFormatFrom(buf, 9, 1, 2, 2, SDL_PIXELFORMAT_INDEX2LSB);
+    SDLTest_AssertCheck(surface == NULL, "Should detect pitch < width * bpp");
+    SDLTest_AssertCheck(SDL_strcmp(SDL_GetError(), expectedError) == 0,
+                        "Expected \"%s\", got \"%s\"", expectedError, SDL_GetError());
+    surface = SDL_CreateRGBSurfaceFrom(buf, 9, 1, 2, 2, 0, 0, 0, 0);
+    SDLTest_AssertCheck(surface == NULL, "Should detect pitch < width * bpp");
+    SDLTest_AssertCheck(SDL_strcmp(SDL_GetError(), expectedError) == 0,
+                        "Expected \"%s\", got \"%s\"", expectedError, SDL_GetError());
+
+    surface = SDL_CreateRGBSurfaceWithFormatFrom(buf, 9, 1, 2, 3, SDL_PIXELFORMAT_INDEX2LSB);
+    SDLTest_AssertCheck(surface != NULL, "9px * 2 bits per px fits in 3 bytes: %s",
+                        surface != NULL ? "(success)" : SDL_GetError());
+    SDL_FreeSurface(surface);
+    surface = SDL_CreateRGBSurfaceFrom(buf, 9, 1, 2, 3, 0, 0, 0, 0);
+    SDLTest_AssertCheck(surface != NULL, "9px * 2 bits per px fits in 3 bytes: %s",
+                        surface != NULL ? "(success)" : SDL_GetError());
+    SDL_FreeSurface(surface);
+
     /* SDL_PIXELFORMAT_INDEX1* needs 1 byte per 8 pixels. */
     surface = SDL_CreateRGBSurfaceWithFormatFrom(buf, 16, 1, 1, 2, SDL_PIXELFORMAT_INDEX1LSB);
     SDLTest_AssertCheck(surface != NULL, "16px * 1 bit per px fits in 2 bytes: %s",
