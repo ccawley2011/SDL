@@ -81,6 +81,9 @@ static SDL_VideoDevice *RISCOS_CreateDevice(void)
     device->SetDisplayMode = RISCOS_SetDisplayMode;
 
     device->CreateSDLWindow = RISCOS_CreateWindow;
+    device->SetWindowTitle = RISCOS_SetWindowTitle;
+    device->ShowWindow = RISCOS_ShowWindow;
+    device->HideWindow = RISCOS_HideWindow;
     device->DestroyWindow = RISCOS_DestroyWindow;
     device->GetWindowWMInfo = RISCOS_GetWindowWMInfo;
 
@@ -89,9 +92,6 @@ static SDL_VideoDevice *RISCOS_CreateDevice(void)
     device->DestroyWindowFramebuffer = RISCOS_DestroyWindowFramebuffer;
 
     device->free = RISCOS_DeleteDevice;
-
-    /* TODO: Support windowed mode */
-    device->quirk_flags = VIDEO_DEVICE_QUIRK_FULLSCREEN_ONLY;
 
     return device;
 }
@@ -104,6 +104,10 @@ VideoBootStrap RISCOS_bootstrap = {
 
 static int RISCOS_VideoInit(_THIS)
 {
+    if (RISCOS_InitWimp(_this) < 0) {
+        return -1;
+    }
+
     if (RISCOS_InitEvents(_this) < 0) {
         return -1;
     }
@@ -123,6 +127,7 @@ static int RISCOS_VideoInit(_THIS)
 static void RISCOS_VideoQuit(_THIS)
 {
     RISCOS_QuitEvents(_this);
+    RISCOS_QuitWimp(_this);
 }
 
 #endif /* SDL_VIDEO_DRIVER_RISCOS */

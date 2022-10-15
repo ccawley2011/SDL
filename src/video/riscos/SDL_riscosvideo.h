@@ -29,6 +29,9 @@
 
 typedef struct SDL_VideoData
 {
+    int wimp_version;
+    int task_handle;
+
     int last_mouse_buttons;
     Uint8 key_pressed[RISCOS_MAX_KEYS_PRESSED];
 } SDL_VideoData;

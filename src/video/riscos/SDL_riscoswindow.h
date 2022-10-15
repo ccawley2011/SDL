@@ -28,12 +28,21 @@
 typedef struct
 {
     SDL_Window *window;
+    int handle;
+    char title[256];
     sprite_area *fb_area;
     sprite_header *fb_sprite;
 } SDL_WindowData;
 
+extern int RISCOS_InitWimp(_THIS);
+extern void RISCOS_QuitWimp(_THIS);
+extern void RISCOS_PollWimp(_THIS);
+
 extern int RISCOS_CreateWindow(_THIS, SDL_Window * window);
 extern void RISCOS_DestroyWindow(_THIS, SDL_Window * window);
+extern void RISCOS_SetWindowTitle(_THIS, SDL_Window * window);
+extern void RISCOS_ShowWindow(_THIS, SDL_Window * window);
+extern void RISCOS_HideWindow(_THIS, SDL_Window * window);
 extern SDL_bool RISCOS_GetWindowWMInfo(_THIS, SDL_Window * window,
                                     struct SDL_SysWMinfo *info);
 

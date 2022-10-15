@@ -23,9 +23,11 @@
 #define SDL_riscosframebuffer_c_h_
 
 #include "../../SDL_internal.h"
+#include "SDL_riscosdefs.h"
 
 extern int RISCOS_CreateWindowFramebuffer(_THIS, SDL_Window *window, Uint32 *format, void **pixels, int *pitch);
 extern int RISCOS_UpdateWindowFramebuffer(_THIS, SDL_Window *window, const SDL_Rect *rects, int numrects);
+extern void RISCOS_RedrawWindowFramebuffer(_THIS, SDL_Window *window, wimp_redraw *block);
 extern void RISCOS_DestroyWindowFramebuffer(_THIS, SDL_Window *window);
 
 #endif /* SDL_riscosframebuffer_c_h_ */

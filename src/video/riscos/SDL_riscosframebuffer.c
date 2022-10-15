@@ -91,26 +91,60 @@ int RISCOS_CreateWindowFramebuffer(_THIS, SDL_Window *window, Uint32 *format, vo
     return 0;
 }
 
+static void DrawSprite(sprite_area *area, sprite_header *header, int x, int y)
+{
+    _kernel_swi_regs regs;
+
+    regs.r[0] = 512 + 52;
+    regs.r[1] = (int)area;
+    regs.r[2] = (int)header;
+    regs.r[3] = x;
+    regs.r[4] = y;
+    regs.r[5] = 0x50;
+    regs.r[6] = 0;
+    regs.r[7] = 0;
+    _kernel_swi(OS_SpriteOp, &regs, &regs);
+}
+
 int RISCOS_UpdateWindowFramebuffer(_THIS, SDL_Window *window, const SDL_Rect *rects, int numrects)
 {
     SDL_WindowData *driverdata = (SDL_WindowData *)window->driverdata;
     _kernel_swi_regs regs;
-    _kernel_oserror *error;
+    wimp_redraw redraw;
+    int j;
 
-    regs.r[0] = 512 + 52;
-    regs.r[1] = (int)driverdata->fb_area;
-    regs.r[2] = (int)driverdata->fb_sprite;
-    regs.r[3] = 0; /* window->x << 1; */
-    regs.r[4] = 0; /* window->y << 1; */
-    regs.r[5] = 0x50;
-    regs.r[6] = 0;
-    regs.r[7] = 0;
-    error = _kernel_swi(OS_SpriteOp, &regs, &regs);
-    if (error) {
-        return SDL_SetError("OS_SpriteOp 52 failed: %s (%i)", error->errmess, error->errnum);
+    regs.r[1] = (int)&redraw;
+    redraw.w = driverdata->handle;
+
+    for (j = 0; j < numrects; j++) {
+        redraw.box.x0 =   rects[j].x << 1;
+        redraw.box.y1 = -(rects[j].y << 1);
+        redraw.box.x1 = redraw.box.x0 + (rects[j].w << 1);
+        redraw.box.y0 = redraw.box.y1 - (rects[j].h << 1);
+
+        if (_kernel_swi(Wimp_UpdateWindow, &regs, &regs) == 0) {
+            while (regs.r[0]) {
+                DrawSprite(driverdata->fb_area, driverdata->fb_sprite, redraw.box.x0, redraw.box.y0);
+                _kernel_swi(Wimp_GetRectangle, &regs, &regs);
+            }
+        }
     }
 
     return 0;
+}
+
+void RISCOS_RedrawWindowFramebuffer(_THIS, SDL_Window *window, wimp_redraw *redraw)
+{
+    SDL_WindowData *driverdata = (SDL_WindowData *)window->driverdata;
+    _kernel_swi_regs regs;
+
+    regs.r[1] = (int)redraw;
+    if (_kernel_swi(Wimp_RedrawWindow, &regs, &regs) == 0) {
+        while (regs.r[0]) {
+            DrawSprite(driverdata->fb_area, driverdata->fb_sprite, redraw->box.x0, redraw->box.y0);
+            _kernel_swi(Wimp_GetRectangle, &regs, &regs);
+        }
+    }
 }
 
 void RISCOS_DestroyWindowFramebuffer(_THIS, SDL_Window *window)

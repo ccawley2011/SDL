@@ -26,6 +26,7 @@
 
 #include "SDL_log.h"
 #include "SDL_riscosvideo.h"
+#include "SDL_riscoswindow.h"
 #include "SDL_riscosevents_c.h"
 #include "scancodes_riscos.h"
 
@@ -153,25 +154,32 @@ int RISCOS_InitEvents(_THIS)
     SDL_ToggleModState(KMOD_CAPS, (status & (1 << 4)) ? SDL_FALSE : SDL_TRUE);
     SDL_ToggleModState(KMOD_SCROLL, (status & (1 << 1)) ? SDL_TRUE : SDL_FALSE);
 
+#if 0
     _kernel_swi(OS_Mouse, &regs, &regs);
     driverdata->last_mouse_buttons = regs.r[2];
 
     /* Disable escape. */
     _kernel_osbyte(229, 1, 0);
+#endif
 
     return 0;
 }
 
 void RISCOS_PumpEvents(_THIS)
 {
+    RISCOS_PollWimp(_this);
+#if 0
     RISCOS_PollMouse(_this);
+#endif
     RISCOS_PollKeyboard(_this);
 }
 
 void RISCOS_QuitEvents(_THIS)
 {
+#if 0
     /* Re-enable escape. */
     _kernel_osbyte(229, 0, 0);
+#endif
 }
 
 #endif /* SDL_VIDEO_DRIVER_RISCOS */

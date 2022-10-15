@@ -48,6 +48,35 @@ typedef struct sprite_header
 
 SDL_COMPILE_TIME_ASSERT(sprite_header, sizeof(sprite_header) == 44);
 
+typedef struct wimp_box {
+    int x0; /*  +0 */
+    int y0; /*  +4 */
+    int x1; /*  +8 */
+    int y1; /* +12 */
+} wimp_box;
+
+SDL_COMPILE_TIME_ASSERT(wimp_box, sizeof(wimp_box) == 16);
+
+typedef struct wimp_open {
+    int w;         /*  +0 */
+    wimp_box box;  /*  +4 */
+    int xscroll;   /* +20 */
+    int yscroll;   /* +24 */
+    int next;      /* +28 */
+} wimp_open;
+
+SDL_COMPILE_TIME_ASSERT(wimp_open, sizeof(wimp_open) == 32);
+
+typedef struct wimp_redraw {
+    int w;         /*  +0 */
+    wimp_box box;  /*  +4 */
+    int xscroll;   /* +20 */
+    int yscroll;   /* +24 */
+    wimp_box clip; /* +28 */
+} wimp_redraw;
+
+SDL_COMPILE_TIME_ASSERT(wimp_redraw, sizeof(wimp_redraw) == 44);
+
 #endif /* SDL_riscosdefs_h_ */
 
 /* vi: set ts=4 sw=4 expandtab: */
