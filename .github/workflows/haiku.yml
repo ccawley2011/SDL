@@ -19,7 +19,7 @@ jobs:
       run: |
         cmake -S . -B build -G Ninja \
           -DCMAKE_SYSTEM_NAME=Haiku \
-          -DCMAKE_SYSTEM_PROCESSOR x86 \
+          -DCMAKE_SYSTEM_PROCESSOR=x86 \
           -DCMAKE_C_COMPILER=i586-pc-haiku-gcc \
           -DCMAKE_CXX_COMPILER=i586-pc-haiku-g++ \
           -DSDL_TESTS=ON \
