@@ -1,0 +1,44 @@
+name: Build (Haiku)
+
+on: [push, pull_request]
+
+jobs:
+  Build:
+    name: CMake
+    runs-on: ubuntu-latest
+    container: haiku/cross-compiler:x86_gcc2-hybrid
+
+    strategy:
+      fail-fast: false
+
+    steps:
+    - name: Setup dependencies
+      run: apt-get update && apt-get install -y cmake ninja-build
+    - uses: actions/checkout@v3
+    - name: Configure (CMake)
+      run: |
+        cmake -S . -B build -G Ninja \
+          -DCMAKE_SYSTEM_NAME=Haiku \
+          -DCMAKE_SYSTEM_PROCESSOR x86 \
+          -DCMAKE_C_COMPILER=i586-pc-haiku-gcc \
+          -DCMAKE_CXX_COMPILER=i586-pc-haiku-g++ \
+          -DSDL_TESTS=ON \
+          -DSDL_INSTALL_TESTS=ON \
+          -DSDL_VENDOR_INFO="Github Workflow" \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/prefix_cmake
+    - name: Build (CMake)
+      run: cmake --build build --verbose
+    - name: Install (CMake)
+      run: |
+        echo "SDL3_DIR=${{ github.workspace }}/prefix_cmake" >> $GITHUB_ENV
+        cmake --install build/
+        ( cd ${{ github.workspace }}/prefix_cmake; find ) | LC_ALL=C sort -u
+    - name: Verify CMake configuration files
+      run: |
+        cmake -S cmake/test -B cmake_config_build -G Ninja \
+          -DCMAKE_TOOLCHAIN_FILE=/home/riscos/env/toolchain-riscos.cmake \
+          -DCMAKE_PREFIX_PATH=${{ env.SDL3_DIR }} \
+          -DCMAKE_BUILD_TYPE=Release \
+          ${{ matrix.platform.test_args }}
+        cmake --build cmake_config_build --verbose
