@@ -37,12 +37,12 @@ int CACA_CreateWindow(SDL_VideoDevice *_this, SDL_Window *window, SDL_Properties
     }
     driverdata->window = window;
 
-    driverdata->cv = caca_create_canvas(window->w, window->h);
+    driverdata->cv = CACA_caca_create_canvas(window->w, window->h);
     if (!driverdata->cv) {
         return SDL_SetError("Failed to create caca canvas");
     }
 
-    driverdata->dp = caca_create_display(driverdata->cv);
+    driverdata->dp = CACA_caca_create_display(driverdata->cv);
     if (!driverdata->dp) {
         return SDL_SetError("Failed to create caca display");
     }
@@ -60,8 +60,8 @@ void CACA_DestroyWindow(SDL_VideoDevice *_this, SDL_Window *window)
         return;
     }
 
-    caca_free_display(driverdata->dp);
-    caca_free_canvas(driverdata->cv);
+    CACA_caca_free_display(driverdata->dp);
+    CACA_caca_free_canvas(driverdata->cv);
     SDL_free(driverdata);
     window->driverdata = NULL;
 }
@@ -74,7 +74,7 @@ void CACA_SetWindowTitle(SDL_VideoDevice *_this, SDL_Window *window)
         return;
     }
 
-    caca_set_display_title(driverdata->dp, window->title);
+    CACA_caca_set_display_title(driverdata->dp, window->title);
 }
 
 #endif /* SDL_VIDEO_DRIVER_CACA */

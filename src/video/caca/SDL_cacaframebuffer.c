@@ -38,14 +38,14 @@ int CACA_CreateWindowFramebuffer(SDL_VideoDevice *_this, SDL_Window *window, Uin
         return -1;
     }
 
-    driverdata->dither = caca_create_dither(SDL_BITSPERPIXEL(driverdata->surface->format->format),
-                                            driverdata->surface->w,
-                                            driverdata->surface->h,
-                                            driverdata->surface->pitch,
-                                            driverdata->surface->format->Rmask,
-                                            driverdata->surface->format->Gmask,
-                                            driverdata->surface->format->Bmask,
-                                            driverdata->surface->format->Amask);
+    driverdata->dither = CACA_caca_create_dither(SDL_BITSPERPIXEL(driverdata->surface->format->format),
+                                                 driverdata->surface->w,
+                                                 driverdata->surface->h,
+                                                 driverdata->surface->pitch,
+                                                 driverdata->surface->format->Rmask,
+                                                 driverdata->surface->format->Gmask,
+                                                 driverdata->surface->format->Bmask,
+                                                 driverdata->surface->format->Amask);
     if (!driverdata->dither) {
         SDL_DestroySurface(driverdata->surface);
         driverdata->surface = NULL;
@@ -64,9 +64,9 @@ int CACA_UpdateWindowFramebuffer(SDL_VideoDevice *_this, SDL_Window *window, con
     SDL_WindowData *driverdata = window->driverdata;
 
     /* Send the data to the display */
-    caca_dither_bitmap(driverdata->cv, 0, 0, driverdata->surface->w, driverdata->surface->h,
-                       driverdata->dither, driverdata->surface->pixels);
-    caca_refresh_display(driverdata->dp);
+    CACA_caca_dither_bitmap(driverdata->cv, 0, 0, driverdata->surface->w, driverdata->surface->h,
+                            driverdata->dither, driverdata->surface->pixels);
+    CACA_caca_refresh_display(driverdata->dp);
 
     return 0;
 }
@@ -76,7 +76,7 @@ void CACA_DestroyWindowFramebuffer(SDL_VideoDevice *_this, SDL_Window *window)
     SDL_WindowData *driverdata = window->driverdata;
 
     if (driverdata->dither) {
-        caca_free_dither(driverdata->dither);
+        CACA_caca_free_dither(driverdata->dither);
         driverdata->dither = NULL;
     }
     if (driverdata->surface) {

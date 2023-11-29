@@ -72,21 +72,21 @@ void CACA_PumpEvents(SDL_VideoDevice *_this)
     caca_event_t ev;
 
     while (window) {
-        if (caca_get_event(window->driverdata->dp, CACA_EVENT_ANY, &ev, 0)) {
-            switch (caca_get_event_type(&ev)) {
+        if (CACA_caca_get_event(window->driverdata->dp, CACA_EVENT_ANY, &ev, 0)) {
+            switch (CACA_caca_get_event_type(&ev)) {
             case CACA_EVENT_QUIT:
                 SDL_SendWindowEvent(window, SDL_EVENT_WINDOW_CLOSE_REQUESTED, 0, 0);
                 break;
             case CACA_EVENT_MOUSE_MOTION:
 		SDL_SendMouseMotion(0, window, 0, 0,
-                                    caca_get_event_mouse_x(&ev),
-                                    caca_get_event_mouse_y(&ev));
+                                    CACA_caca_get_event_mouse_x(&ev),
+                                    CACA_caca_get_event_mouse_y(&ev));
                 break;
             case CACA_EVENT_MOUSE_PRESS:
             case CACA_EVENT_MOUSE_RELEASE:
                 CACA_HandleMouseButton(window,
-                                       caca_get_event_type(&ev),
-                                       caca_get_event_mouse_button(&ev));
+                                       CACA_caca_get_event_type(&ev),
+                                       CACA_caca_get_event_mouse_button(&ev));
                 break;
             default:
                 break;

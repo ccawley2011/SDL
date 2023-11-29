@@ -600,6 +600,47 @@ endmacro()
 
 # Requires:
 # - n/a
+# Optional:
+# - SDL_CACA_SHARED opt
+# - HAVE_SDL_LOADSO opt
+macro(CheckCACA)
+  if(SDL_CACA)
+    set(CACA_PKG_CONFIG_SPEC "caca")
+    pkg_check_modules(PC_CACA IMPORTED_TARGET ${CACA_PKG_CONFIG_SPEC})
+    if(PC_CACA_FOUND)
+      sdl_glob_sources("${SDL3_SOURCE_DIR}/src/video/caca/*.c")
+      set(SDL_VIDEO_DRIVER_CACA 1)
+      set(HAVE_CACA TRUE)
+      set(HAVE_CACA_SHARED FALSE)
+      if(SDL_CACA_SHARED)
+        if(HAVE_SDL_LOADSO)
+          FindLibraryAndSONAME("caca" LIBDIRS ${PC_CACA_LIBRARY_DIRS})
+          if(CACA_LIB AND CACA_SHARED)
+            sdl_link_dependency(caca INCLUDES $<TARGET_PROPERTY:PkgConfig::PC_CACA,INTERFACE_INCLUDE_DIRECTORIES>)
+            set(SDL_VIDEO_DRIVER_CACA_DYNAMIC "\"${CACA_LIB_SONAME}\"")
+            set(HAVE_CACA_SHARED TRUE)
+          else()
+            message(WARNING "Unable to find caca shared object")
+          endif()
+        else()
+          message(WARNING "You must have SDL_LoadObject() support for dynamic caca loading")
+        endif()
+      endif()
+      if(NOT HAVE_CACA_SHARED)
+        #FIXME: remove this line and property generate sdl3.pc
+        list(APPEND SDL_PC_PRIVATE_REQUIRES caca)
+        sdl_link_dependency(caca LIBS PkgConfig::PC_CACA PKG_CONFIG_PREFIX PC_CACA PKG_CONFIG_SPECS "${CACA_PKG_CONFIG_SPEC}")
+      endif()
+      set(HAVE_SDL_VIDEO TRUE)
+    endif()
+  else()
+    set(HAVE_CACA FALSE)
+    message(WARNING "Unable to find the caca development library")
+  endif()
+endmacro()
+
+# Requires:
+# - n/a
 #
 macro(CheckCOCOA)
   if(SDL_COCOA)

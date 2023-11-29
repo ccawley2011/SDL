@@ -18,26 +18,32 @@
      misrepresented as being the original software.
   3. This notice may not be removed or altered from any source distribution.
 */
+
+#ifndef SDL_cacadyn_h_
+#define SDL_cacadyn_h_
+
 #include "SDL_internal.h"
 
-#ifndef SDL_cacawindow_h_
-#define SDL_cacawindow_h_
+#include <caca.h>
 
-#include "SDL_cacadyn.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-struct SDL_WindowData
-{
-    SDL_Window *window;
+int SDL_CACA_LoadSymbols(void);
+void SDL_CACA_UnloadSymbols(void);
 
-    caca_canvas_t *cv;
-    caca_display_t *dp;
+/* Declare all the function pointers and wrappers... */
+#define SDL_CACA_SYM(rc, fn, params)        \
+    typedef rc(*SDL_DYNCACAFN_##fn) params; \
+    extern SDL_DYNCACAFN_##fn CACA_##fn;
+#define SDL_CACA_SYM_CONST(type, name)    \
+    typedef type SDL_DYNCACACONST_##name; \
+    extern SDL_DYNCACACONST_##name CACA_##name;
+#include "SDL_cacasym.h"
 
-    SDL_Surface *surface;
-    caca_dither_t *dither;
-};
+#ifdef __cplusplus
+}
+#endif
 
-extern int CACA_CreateWindow(SDL_VideoDevice *_this, SDL_Window *window, SDL_PropertiesID create_props);
-extern void CACA_DestroyWindow(SDL_VideoDevice *_this, SDL_Window *window);
-extern void CACA_SetWindowTitle(SDL_VideoDevice *_this, SDL_Window *window);
-
-#endif /* SDL_cacawindow_h_ */
+#endif /* SDL_cacadyn_h_ */

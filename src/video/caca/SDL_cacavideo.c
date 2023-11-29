@@ -39,11 +39,17 @@ static void CACA_VideoQuit(SDL_VideoDevice *_this);
 static void CACA_DeleteDevice(SDL_VideoDevice *device)
 {
     SDL_free(device);
+
+    SDL_CACA_UnloadSymbols();
 }
 
 static SDL_VideoDevice *CACA_CreateDevice(void)
 {
     SDL_VideoDevice *device;
+
+    if (!SDL_CACA_LoadSymbols()) {
+        return NULL;
+    }
 
     /* Initialize all variables that we clean on shutdown */
     device = (SDL_VideoDevice *)SDL_calloc(1, sizeof(SDL_VideoDevice));
