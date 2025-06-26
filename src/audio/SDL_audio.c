@@ -92,6 +92,9 @@ static const AudioBootStrap *const bootstrap[] = {
 #ifdef SDL_AUDIO_DRIVER_QNX
     &QSAAUDIO_bootstrap,
 #endif
+#ifdef SDL_AUDIO_DRIVER_DOS_SOUNDBLASTER
+    &DOSSOUNDBLASTER_bootstrap,
+#endif
 #ifdef SDL_AUDIO_DRIVER_DISK
     &DISKAUDIO_bootstrap,
 #endif
@@ -838,9 +841,10 @@ static bool SDL_AudioPlayDevice_Default(SDL_AudioDevice *device, const Uint8 *bu
 static bool SDL_AudioWaitRecordingDevice_Default(SDL_AudioDevice *device) { return true; /* no-op. */ }
 static void SDL_AudioFlushRecording_Default(SDL_AudioDevice *device) { /* no-op. */ }
 static void SDL_AudioCloseDevice_Default(SDL_AudioDevice *device) { /* no-op. */ }
+static void SDL_AudioFreeDeviceHandle_Default(SDL_AudioDevice *device) { /* no-op. */ }
+static void SDL_AudioPump_Default(void) { /* no-op. */ }
 static void SDL_AudioDeinitializeStart_Default(void) { /* no-op. */ }
 static void SDL_AudioDeinitialize_Default(void) { /* no-op. */ }
-static void SDL_AudioFreeDeviceHandle_Default(SDL_AudioDevice *device) { /* no-op. */ }
 
 static void SDL_AudioThreadInit_Default(SDL_AudioDevice *device)
 {
@@ -892,6 +896,7 @@ static void CompleteAudioEntryPoints(void)
     FILL_STUB(FlushRecording);
     FILL_STUB(CloseDevice);
     FILL_STUB(FreeDeviceHandle);
+    FILL_STUB(Pump);
     FILL_STUB(DeinitializeStart);
     FILL_STUB(Deinitialize);
     #undef FILL_STUB
