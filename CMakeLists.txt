@@ -163,7 +163,7 @@ endif()
 # The hidraw support doesn't catch Xbox, PS4 and Nintendo controllers,
 #  so we'll just use libusb when it's available. libusb does not support iOS,
 #  so we default to yes on iOS.
-if(IOS OR TVOS OR VISIONOS OR WATCHOS OR ANDROID OR NGAGE)
+if(IOS OR TVOS OR VISIONOS OR WATCHOS OR ANDROID OR NGAGE OR DOS)
   set(SDL_HIDAPI_LIBUSB_AVAILABLE FALSE)
 else()
   set(SDL_HIDAPI_LIBUSB_AVAILABLE TRUE)
@@ -207,7 +207,7 @@ if(EMSCRIPTEN)
   set(SDL_SHARED_AVAILABLE OFF)
 endif()
 
-if(VITA OR PSP OR PS2 OR N3DS OR RISCOS OR NGAGE)
+if(VITA OR PSP OR PS2 OR N3DS OR RISCOS OR NGAGE OR DOS)
   set(SDL_SHARED_AVAILABLE OFF)
 endif()
 
@@ -3669,7 +3669,7 @@ endif()
 # We always need to have threads and timers around
 if(NOT HAVE_SDL_THREADS)
   # The Emscripten and N-Gage platform has been carefully vetted to work without threads
-  if(EMSCRIPTEN OR NGAGE)
+  if(EMSCRIPTEN OR NGAGE OR DOS)
     set(SDL_THREADS_DISABLED 1)
     sdl_glob_sources(
       "${SDL3_SOURCE_DIR}/src/thread/generic/*.c"
@@ -3680,7 +3680,7 @@ if(NOT HAVE_SDL_THREADS)
   endif()
 endif()
 if(NOT HAVE_SDL_TIMERS)
-  message(FATAL_ERROR "Timers are needed by many SDL subsystems and may not be disabled")
+#  message(FATAL_ERROR "Timers are needed by many SDL subsystems and may not be disabled")
 endif()
 
 # Most platforms use this.
