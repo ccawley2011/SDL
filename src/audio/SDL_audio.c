@@ -842,7 +842,6 @@ static bool SDL_AudioWaitRecordingDevice_Default(SDL_AudioDevice *device) { retu
 static void SDL_AudioFlushRecording_Default(SDL_AudioDevice *device) { /* no-op. */ }
 static void SDL_AudioCloseDevice_Default(SDL_AudioDevice *device) { /* no-op. */ }
 static void SDL_AudioFreeDeviceHandle_Default(SDL_AudioDevice *device) { /* no-op. */ }
-static void SDL_AudioPump_Default(void) { /* no-op. */ }
 static void SDL_AudioDeinitializeStart_Default(void) { /* no-op. */ }
 static void SDL_AudioDeinitialize_Default(void) { /* no-op. */ }
 
@@ -896,7 +895,6 @@ static void CompleteAudioEntryPoints(void)
     FILL_STUB(FlushRecording);
     FILL_STUB(CloseDevice);
     FILL_STUB(FreeDeviceHandle);
-    FILL_STUB(Pump);
     FILL_STUB(DeinitializeStart);
     FILL_STUB(Deinitialize);
     #undef FILL_STUB
