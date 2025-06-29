@@ -3339,6 +3339,10 @@ elseif(DOS)
   sdl_glob_sources("${SDL3_SOURCE_DIR}/src/audio/dos/*.c")
   set(HAVE_SDL_AUDIO TRUE)
 
+  set(SDL_VIDEO_DRIVER_DOSVESA 1)
+  sdl_glob_sources("${SDL3_SOURCE_DIR}/src/video/dos/*.c")
+  set(HAVE_SDL_VIDEO TRUE)
+
   set(SDL_FSOPS_POSIX 1)
 
   # !!! FIXME
