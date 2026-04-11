@@ -146,7 +146,7 @@ static bool DOSSOUNDBLASTER_OpenDevice(SDL_AudioDevice *device)
     SDL_Log("SOUNDBLASTER: Allocated %d bytes of conventional memory at segment %d (ptr=%p)", (int) hidden->dma_buflen, (int) hidden->dma_seginfo.rm_segment, hidden->dma_buffer);
 
     // silence the DMA buffer to start
-    memset(hidden->dma_buffer, '\0', hidden->dma_buflen);
+    SDL_memset(hidden->dma_buffer, '\0', hidden->dma_buflen);
 
     // !!! FIXME: this is different for 8-bit DMA.
     // set up DMA controller.

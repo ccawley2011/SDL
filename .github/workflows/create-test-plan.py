@@ -820,7 +820,7 @@ def spec_to_job(spec: JobSpec, key: str, trackmem_symbol_names: bool, ctest_args
             job.werror = False  # FIXME: enable SDL_WERROR
             job.shared = False
             job.run_tests = False
-            job.setup_ngage_sdk_path = "C:/ngagesdk"
+            job.setup_gage_sdk_path = "C:/ngagesdk"
             job.cmake_toolchain_file = "C:/ngagesdk/cmake/ngage-toolchain.cmake"
             job.test_pkg_config = False
         case SdlPlatform.DJGPP:
