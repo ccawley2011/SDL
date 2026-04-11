@@ -52,6 +52,7 @@ struct SDL_VideoData
     __dpmi_meminfo mapping;  // video memory mapping.
     SDL_DisplayMode current_mode;
     DOS_InterruptHook keyboard_interrupt_hook;
+    Uint32 palette_version;  // tracks SDL_Palette::version to detect changes
 };
 
 struct SDL_DisplayData

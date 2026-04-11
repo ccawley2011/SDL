@@ -29,6 +29,8 @@
 #include "../../events/SDL_mouse_c.h"
 #include "../../SDL_properties_c.h"
 
+#include <pc.h>  // for inportb, outportb
+
 // note that DOS_SURFACE's value is the same string that the dummy driver uses.
 #define DOS_SURFACE "SDL.internal.window.surface"
 #define DOS_LFB_SURFACE "SDL.internal.window.lfb_surface"
@@ -53,6 +55,16 @@ bool DOSVESA_CreateWindowFramebuffer(SDL_VideoDevice *device, SDL_Window *window
     if (!lfb_surface) {
         SDL_DestroySurface(surface);
         return false;
+    }
+
+    // For 8-bit indexed modes, both surfaces need palettes.
+    // Share the same palette object so palette updates propagate to both.
+    if (surface_format == SDL_PIXELFORMAT_INDEX8) {
+        SDL_Palette *palette = SDL_CreateSurfacePalette(surface);
+        if (palette) {
+            SDL_SetSurfacePalette(lfb_surface, palette);
+        }
+        data->palette_version = 0;  // force DAC update on first present
     }
 
     // clear the framebuffer completely, in case another window at a larger size was using this before us.
@@ -113,6 +125,44 @@ bool DOSVESA_UpdateWindowFramebuffer(SDL_VideoDevice *device, SDL_Window *window
         }
     }
 
+    // For 8-bit indexed modes, update VGA DAC palette if it changed.
+    // We check the window surface's palette (which the app updates via
+    // SDL_SetPaletteColors), NOT the internal DOS_SURFACE palette.
+    // SDL3 core wraps our pixels in a new SDL_Surface (window->surface)
+    // via SDL_CreateSurfaceFrom, so the app's palette lives there.
+    if (src->format == SDL_PIXELFORMAT_INDEX8) {
+        SDL_VideoData *vdata = device->internal;
+        SDL_Palette *win_palette = window->surface ? SDL_GetSurfacePalette(window->surface) : NULL;
+        SDL_Palette *src_palette = SDL_GetSurfacePalette(src);
+
+        // Sync: if the app set colors on the window surface palette,
+        // copy them to the internal surface so the blit works correctly.
+        if (win_palette && src_palette && win_palette != src_palette &&
+            win_palette->version != src_palette->version) {
+            SDL_SetPaletteColors(src_palette, win_palette->colors, 0,
+                                 SDL_min(win_palette->ncolors, src_palette->ncolors));
+            // Also update the LFB surface palette for correct blitting
+            SDL_Palette *dst_palette = SDL_GetSurfacePalette(dst);
+            if (dst_palette && dst_palette != src_palette) {
+                SDL_SetPaletteColors(dst_palette, win_palette->colors, 0,
+                                     SDL_min(win_palette->ncolors, dst_palette->ncolors));
+            }
+        }
+
+        // Program the VGA DAC from whichever palette has data
+        SDL_Palette *dac_palette = win_palette ? win_palette : src_palette;
+        if (dac_palette && dac_palette->version != vdata->palette_version) {
+            vdata->palette_version = dac_palette->version;
+
+            outportb(0x3C8, 0);
+            for (int i = 0; i < dac_palette->ncolors && i < 256; i++) {
+                outportb(0x3C9, dac_palette->colors[i].r >> 2);
+                outportb(0x3C9, dac_palette->colors[i].g >> 2);
+                outportb(0x3C9, dac_palette->colors[i].b >> 2);
+            }
+        }
+    }
+
     // wait for vsync if necessary...
     const int vsync_interval = windata->framebuffer_vsync;
     for (int i = 0; i < vsync_interval; i++) {
@@ -145,4 +195,3 @@ void DOSVESA_DestroyWindowFramebuffer(SDL_VideoDevice *device, SDL_Window *windo
 }
 
 #endif // SDL_VIDEO_DRIVER_DOSVESA
-

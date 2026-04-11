@@ -242,10 +242,10 @@ static bool DOSVESA_GetDisplayModes(SDL_VideoDevice *device, SDL_VideoDisplay *s
         }
 
         #if 0
-        SDL_Log("VESA: mode=%d %dx%dx%d attr=%X pitch=%d planes=%d pages=%d r=%d@%d g=%d@%d b=%d@%d addr=%X\n",
+        SDL_Log("VESA: mode=%d %dx%dx%d attr=%X pitch=%d planes=%d model=%d pages=%d r=%d@%d g=%d@%d b=%d@%d addr=%X",
                 (int) info.mode_id, (int) info.w, (int) info.h, (int) info.bpp,
                 (unsigned int) info.attributes, (int) info.pitch,
-                (int) info.num_planes, (int) info.num_image_pages,
+                (int) info.num_planes, (int) info.memory_model, (int) info.num_image_pages,
                 (int) info.red_mask_size, (int) info.red_mask_pos,
                 (int) info.green_mask_size, (int) info.green_mask_pos,
                 (int) info.blue_mask_size, (int) info.blue_mask_pos,
@@ -256,17 +256,19 @@ static bool DOSVESA_GetDisplayModes(SDL_VideoDevice *device, SDL_VideoDisplay *s
             continue;  // Doesn't have all the attributes we want.
         } else if (info.num_planes != 1) {
             continue;  // skip planar pixel layouts.
-        } else if (info.bpp < 15) {
-            continue;  // we're not messing with palettes, etc.  (does SDL3 even support this at the display level?!)
+        } else if (info.bpp < 8) {
+            continue;  // skip anything below 8-bit.
         } else if (!info.w || !info.h) {
             continue;  // zero-area display mode?!
         } else if ((info.memory_model != 4) && (info.memory_model != 6)) {
             continue;  // must be either packed pixel (4) or Direct Color (6).
+            // Note: 8-bit indexed modes are memory model 4 (packed pixel).
         }
 
         SDL_PixelFormat format = SDL_PIXELFORMAT_UNKNOWN;
         if (info.memory_model == 4) {  // packed pixel
             switch (info.bpp) {
+                case 8: format = SDL_PIXELFORMAT_INDEX8; break;
                 case 15: format = SDL_PIXELFORMAT_XRGB1555; break;
                 case 16: format = SDL_PIXELFORMAT_RGB565; break;
                 case 24: format = SDL_PIXELFORMAT_RGB24; break;
@@ -288,13 +290,11 @@ static bool DOSVESA_GetDisplayModes(SDL_VideoDevice *device, SDL_VideoDisplay *s
         // okay, add this mode.
 
         #if 0
-        SDL_Log("ADD VESA MODE: mode=%d %dx%dx%d attr=%X pitch=%d planes=%d pages=%d r=%d@%d g=%d@%d b=%d@%d addr=%X\n",
+        SDL_Log("ADD VESA MODE: mode=%d %dx%dx%d fmt=%s attr=%X pitch=%d planes=%d pages=%d addr=%X",
                 (int) info.mode_id, (int) info.w, (int) info.h, (int) info.bpp,
+                SDL_GetPixelFormatName(format),
                 (unsigned int) info.attributes, (int) info.pitch,
                 (int) info.num_planes, (int) info.num_image_pages,
-                (int) info.red_mask_size, (int) info.red_mask_pos,
-                (int) info.green_mask_size, (int) info.green_mask_pos,
-                (int) info.blue_mask_size, (int) info.blue_mask_pos,
                 (unsigned int) info.physical_base_addr);
         #endif
 
