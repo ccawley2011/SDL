@@ -128,24 +128,157 @@ static const SDL_Scancode DOSVESA_ScancodeMapping[] = {  // index is the scancod
     /* 0x058 */ SDL_SCANCODE_F12
 };
 
+// Extended scancode table for keys prefixed with 0xE0
+static const SDL_Scancode DOSVESA_ExtendedScancodeMapping[] = {  // index is the scancode byte following the 0xE0 prefix, masked with 0x7F.
+    /* 0x00 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x01 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x02 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x03 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x04 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x05 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x06 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x07 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x08 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x09 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x0A */ SDL_SCANCODE_UNKNOWN,
+    /* 0x0B */ SDL_SCANCODE_UNKNOWN,
+    /* 0x0C */ SDL_SCANCODE_UNKNOWN,
+    /* 0x0D */ SDL_SCANCODE_UNKNOWN,
+    /* 0x0E */ SDL_SCANCODE_UNKNOWN,
+    /* 0x0F */ SDL_SCANCODE_UNKNOWN,
+
+    /* 0x10 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x11 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x12 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x13 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x14 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x15 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x16 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x17 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x18 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x19 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x1A */ SDL_SCANCODE_UNKNOWN,
+    /* 0x1B */ SDL_SCANCODE_UNKNOWN,
+    /* 0x1C */ SDL_SCANCODE_KP_ENTER,
+    /* 0x1D */ SDL_SCANCODE_RCTRL,
+    /* 0x1E */ SDL_SCANCODE_UNKNOWN,
+    /* 0x1F */ SDL_SCANCODE_UNKNOWN,
+
+    /* 0x20 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x21 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x22 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x23 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x24 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x25 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x26 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x27 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x28 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x29 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x2A */ SDL_SCANCODE_UNKNOWN,  // fake left shift, ignore
+    /* 0x2B */ SDL_SCANCODE_UNKNOWN,
+    /* 0x2C */ SDL_SCANCODE_UNKNOWN,
+    /* 0x2D */ SDL_SCANCODE_UNKNOWN,
+    /* 0x2E */ SDL_SCANCODE_UNKNOWN,
+    /* 0x2F */ SDL_SCANCODE_UNKNOWN,
+
+    /* 0x30 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x31 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x32 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x33 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x34 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x35 */ SDL_SCANCODE_KP_DIVIDE,
+    /* 0x36 */ SDL_SCANCODE_UNKNOWN,  // fake right shift, ignore
+    /* 0x37 */ SDL_SCANCODE_PRINTSCREEN,
+    /* 0x38 */ SDL_SCANCODE_RALT,
+    /* 0x39 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x3A */ SDL_SCANCODE_UNKNOWN,
+    /* 0x3B */ SDL_SCANCODE_UNKNOWN,
+    /* 0x3C */ SDL_SCANCODE_UNKNOWN,
+    /* 0x3D */ SDL_SCANCODE_UNKNOWN,
+    /* 0x3E */ SDL_SCANCODE_UNKNOWN,
+    /* 0x3F */ SDL_SCANCODE_UNKNOWN,
+
+    /* 0x40 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x41 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x42 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x43 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x44 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x45 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x46 */ SDL_SCANCODE_PAUSE,  // Ctrl+Break sends E0 46 E0 C6
+    /* 0x47 */ SDL_SCANCODE_HOME,
+    /* 0x48 */ SDL_SCANCODE_UP,
+    /* 0x49 */ SDL_SCANCODE_PAGEUP,
+    /* 0x4A */ SDL_SCANCODE_UNKNOWN,
+    /* 0x4B */ SDL_SCANCODE_LEFT,
+    /* 0x4C */ SDL_SCANCODE_UNKNOWN,
+    /* 0x4D */ SDL_SCANCODE_RIGHT,
+    /* 0x4E */ SDL_SCANCODE_UNKNOWN,
+    /* 0x4F */ SDL_SCANCODE_END,
+
+    /* 0x50 */ SDL_SCANCODE_DOWN,
+    /* 0x51 */ SDL_SCANCODE_PAGEDOWN,
+    /* 0x52 */ SDL_SCANCODE_INSERT,
+    /* 0x53 */ SDL_SCANCODE_DELETE,
+    /* 0x54 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x55 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x56 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x57 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x58 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x59 */ SDL_SCANCODE_UNKNOWN,
+    /* 0x5A */ SDL_SCANCODE_UNKNOWN,
+    /* 0x5B */ SDL_SCANCODE_LGUI,
+    /* 0x5C */ SDL_SCANCODE_RGUI,
+    /* 0x5D */ SDL_SCANCODE_APPLICATION
+};
+
 static Uint8 keyevents_ringbuffer[256];
 static int keyevents_head = 0;
 static int keyevents_tail = 0;
 
 void DOSVESA_PumpEvents(SDL_VideoDevice *device)
 {
+    static bool is_extended = false;
+    static int pause_sequence_remaining = 0;
+
     while (keyevents_head != keyevents_tail) {
         const Uint8 event = keyevents_ringbuffer[keyevents_tail];
         keyevents_tail = (keyevents_tail + 1) & (SDL_arraysize(keyevents_ringbuffer) - 1);
 
+        // Handle remaining bytes of E1 Pause key sequence (E1 1D 45 E1 9D C5).
+        if (pause_sequence_remaining > 0) {
+            pause_sequence_remaining--;
+            continue;
+        }
+
+        // 0xE1 prefix: Pause key sends E1 1D 45 E1 9D C5. Emit PAUSE press+release and consume the rest.
+        if (event == 0xE1) {
+            pause_sequence_remaining = 5;  // skip the next 5 bytes
+            SDL_SendKeyboardKey(0, SDL_GLOBAL_KEYBOARD_ID, 0, SDL_SCANCODE_PAUSE, true);
+            SDL_SendKeyboardKey(0, SDL_GLOBAL_KEYBOARD_ID, 0, SDL_SCANCODE_PAUSE, false);
+            continue;
+        }
+
+        // 0xE0 prefix: next byte is an extended scancode.
+        if (event == 0xE0) {
+            is_extended = true;
+            continue;
+        }
+
         const int scancode = (int) (event & 0x7F);
         const bool pressed = ((event & 0x80) == 0);
 
-        // !!! FIXME: 0xE0 is an extended key signifier. This gives you things like Right Ctrl and the dedicated arrow keys...they
-        // !!! FIXME:  just happen to map to the non-extended versions (left ctrl, keypad arrows) if you ignore the extended byte.
-        // !!! FIXME: But we should handle this appropriately.
-        if (scancode < SDL_arraysize(DOSVESA_ScancodeMapping)) {
-            SDL_SendKeyboardKey(0, SDL_GLOBAL_KEYBOARD_ID, 0, DOSVESA_ScancodeMapping[scancode], pressed);
+        if (is_extended) {
+            is_extended = false;
+            if (scancode < SDL_arraysize(DOSVESA_ExtendedScancodeMapping)) {
+                const SDL_Scancode sc = DOSVESA_ExtendedScancodeMapping[scancode];
+                if (sc != SDL_SCANCODE_UNKNOWN) {
+                    SDL_SendKeyboardKey(0, SDL_GLOBAL_KEYBOARD_ID, 0, sc, pressed);
+                }
+            }
+        } else {
+            if (scancode < SDL_arraysize(DOSVESA_ScancodeMapping)) {
+                SDL_SendKeyboardKey(0, SDL_GLOBAL_KEYBOARD_ID, 0, DOSVESA_ScancodeMapping[scancode], pressed);
+            }
         }
     }
 
@@ -188,6 +321,13 @@ static void KeyboardIRQHandler(void)  // this is wrapped in a thing that handles
 void DOSVESA_InitKeyboard(SDL_VideoDevice *device)
 {
     SDL_VideoData *data = device->internal;
+
+    // Lock ISR code and data to prevent page faults during interrupts
+    _go32_dpmi_lock_code((void *)KeyboardIRQHandler, (unsigned long)DOSVESA_InitKeyboard - (unsigned long)KeyboardIRQHandler);
+    _go32_dpmi_lock_data((void *)keyevents_ringbuffer, sizeof(keyevents_ringbuffer));
+    _go32_dpmi_lock_data((void *)&keyevents_head, sizeof(keyevents_head));
+    _go32_dpmi_lock_data((void *)&keyevents_tail, sizeof(keyevents_tail));
+
     DOS_HookInterrupt(1, KeyboardIRQHandler, &data->keyboard_interrupt_hook);
 }
 
@@ -195,6 +335,21 @@ void DOSVESA_QuitKeyboard(SDL_VideoDevice *device)
 {
     SDL_VideoData *data = device->internal;
     DOS_UnhookInterrupt(&data->keyboard_interrupt_hook, false);
+
+    // Drain the BIOS keyboard buffer so held keys (like ESC) don't
+    // bleed through to the DOS command line after we exit.
+    {
+        __dpmi_regs regs;
+        for (;;) {
+            regs.h.ah = 0x01;  // BIOS: check for keystroke
+            __dpmi_int(0x16, &regs);
+            if (regs.x.flags & 0x40) {  // ZF set = buffer empty
+                break;
+            }
+            regs.h.ah = 0x00;  // BIOS: read keystroke (removes it)
+            __dpmi_int(0x16, &regs);
+        }
+    }
 }
 
 #endif // SDL_VIDEO_DRIVER_DOSVESA

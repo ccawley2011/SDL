@@ -145,7 +145,7 @@ void DOSVESA_InitMouse(SDL_VideoDevice *_this)
         return;  // no mouse found, don't hook up cursor support, etc.
     }
 
-    mouse->internal = (void *) (size_t) 0x1;  // just something non-NULL for now to say "there's a mouse available."
+    mouse->internal = SDL_calloc(1, 1);  // just something non-NULL (and safely freeable) to say "there's a mouse available."
 
     mouse->CreateCursor = DOSVESA_CreateCursor;
     mouse->ShowCursor = DOSVESA_ShowCursor;

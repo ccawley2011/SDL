@@ -332,6 +332,13 @@ static bool DOSVESA_SetDisplayMode(SDL_VideoDevice *device, SDL_VideoDisplay *sd
     SDL_VideoData *data = device->internal;
     const SDL_DisplayModeData *modedata = mode->internal;
 
+    // During shutdown, SDL resets to the desktop mode which has no internal
+    // data (it was synthesised in VideoInit as a placeholder).  Just let
+    // VideoQuit handle the actual VBE mode restore.
+    if (!modedata) {
+        return true;
+    }
+
     if (data->current_mode.internal && (data->current_mode.internal->mode_id == modedata->mode_id)) {
         return true;
     }
@@ -364,6 +371,30 @@ static bool DOSVESA_SetDisplayMode(SDL_VideoDevice *device, SDL_VideoDisplay *sd
 
     SDL_copyp(&data->current_mode, mode);
 
+    // Set up page-flipping if the mode has at least 1 image page (meaning 2 total)
+    if (modedata->num_image_pages >= 1) {
+        data->page_flip_available = true;
+        data->current_page = 0;
+        data->page_offset[0] = 0;
+        data->page_offset[1] = (Uint32)modedata->pitch * (Uint32)modedata->h;
+
+        // Also blank the second page
+        SDL_memset((Uint8 *)DOS_PhysicalToLinear(data->mapping.address) + data->page_offset[1],
+                   '\0', (Uint32)modedata->pitch * (Uint32)modedata->h);
+
+        // Start display at page 0
+        regs.x.ax = 0x4F07;
+        regs.x.bx = 0x0000;  // set display start, wait for retrace
+        regs.x.cx = 0;       // first pixel in scan line
+        regs.x.dx = 0;       // first scan line
+        __dpmi_int(0x10, &regs);
+    } else {
+        data->page_flip_available = false;
+        data->current_page = 0;
+        data->page_offset[0] = 0;
+        data->page_offset[1] = 0;
+    }
+
     if (SDL_GetMouse()->internal != NULL) {  // internal != NULL) == int 33h services available.
         regs.x.ax = 0x7;  // set mouse min/max horizontal position.
         regs.x.cx = 0;
@@ -395,6 +426,59 @@ static bool DOSVESA_CreateWindow(SDL_VideoDevice *device, SDL_Window *window, SD
         SDL_copyp(&closest, &display->fullscreen_modes[0]);
         window->w = closest.w;  // clamp window to the largest size we have available.
         window->h = closest.h;  // clamp window to the largest size we have available.
+    }
+
+    // SDL_GetClosestFullscreenDisplayMode picks by resolution/refresh only and
+    // may return an INDEX8 mode even when the app wants RGB.  Unless the window
+    // was explicitly created with SDL_PIXELFORMAT_INDEX8 (checked via the
+    // create_props), prefer the highest-bpp mode at the same resolution so that
+    // the software renderer and other RGB consumers work correctly.
+    if (closest.format == SDL_PIXELFORMAT_INDEX8) {
+        bool want_index8 = false;
+        if (create_props) {
+            const char *fmt_hint = SDL_GetStringProperty(create_props, "SDL_PIXELFORMAT", NULL);
+            if (fmt_hint && SDL_strcmp(fmt_hint, "INDEX8") == 0) {
+                want_index8 = true;
+            }
+        }
+        if (!want_index8) {
+            // Scan all modes for a higher-bpp mode at the same (or similar) resolution.
+            SDL_DisplayMode best;
+            SDL_zero(best);
+            for (int i = 0; i < display->num_fullscreen_modes; ++i) {
+                const SDL_DisplayMode *m = &display->fullscreen_modes[i];
+                if (m->format == SDL_PIXELFORMAT_INDEX8) {
+                    continue;
+                }
+                if (m->w == closest.w && m->h == closest.h) {
+                    // Exact resolution match — pick highest bpp.
+                    if (!best.internal || SDL_BITSPERPIXEL(m->format) > SDL_BITSPERPIXEL(best.format)) {
+                        SDL_copyp(&best, m);
+                    }
+                }
+            }
+            if (!best.internal) {
+                // No exact match — find the smallest non-INDEX8 mode that fits.
+                for (int i = 0; i < display->num_fullscreen_modes; ++i) {
+                    const SDL_DisplayMode *m = &display->fullscreen_modes[i];
+                    if (m->format == SDL_PIXELFORMAT_INDEX8) {
+                        continue;
+                    }
+                    if (m->w >= closest.w && m->h >= closest.h) {
+                        if (!best.internal || (m->w * m->h) < (best.w * best.h) ||
+                            ((m->w == best.w && m->h == best.h) &&
+                             SDL_BITSPERPIXEL(m->format) > SDL_BITSPERPIXEL(best.format))) {
+                            SDL_copyp(&best, m);
+                        }
+                    }
+                }
+            }
+            if (best.internal) {
+                SDL_copyp(&closest, &best);
+            }
+            // If no non-INDEX8 mode was found at all, fall through with the
+            // original INDEX8 mode — better than failing.
+        }
     }
 
     // if we're going fullscreen, don't set a video mode now, since we're just going to set one in a moment anyhow.
@@ -445,6 +529,53 @@ static bool DOSVESA_VideoInit(SDL_VideoDevice *device)
         return false;
     }
 
+    // Save the current VBE mode so we can restore it on quit.
+    {
+        __dpmi_regs regs;
+        SDL_zero(regs);
+        regs.x.ax = 0x4F03;  // VBE Get Current Mode
+        __dpmi_int(0x10, &regs);
+        if (regs.x.ax == 0x004F) {
+            data->original_vbe_mode = regs.x.bx;
+        } else {
+            data->original_vbe_mode = 0x03;  // assume text mode
+        }
+
+        // Save VBE state via VBE function 0x4F04 so we can do a full restore later.
+        // Step 1: query the required buffer size (subfunction 0x00).
+        SDL_zero(regs);
+        regs.x.ax = 0x4F04;
+        regs.x.dx = 0x00;   // subfunction 0: get state buffer size
+        regs.x.cx = 0x0F;   // save all state: hardware + BIOS data + DAC + SVGA
+        __dpmi_int(0x10, &regs);
+        if (regs.x.ax == 0x004F) {
+            // regs.x.bx contains size in 64-byte blocks.
+            Uint32 state_size = (Uint32)regs.x.bx * 64;
+            _go32_dpmi_seginfo state_seginfo;
+            void *state_buf = DOS_AllocateConventionalMemory(state_size, &state_seginfo);
+            if (state_buf) {
+                // Step 2: save state (subfunction 0x01) into conventional memory buffer.
+                SDL_zero(regs);
+                regs.x.ax = 0x4F04;
+                regs.x.dx = 0x01;   // subfunction 1: save state
+                regs.x.cx = 0x0F;   // all state
+                regs.x.es = DOS_LinearToPhysical(state_buf) / 16;
+                regs.x.bx = DOS_LinearToPhysical(state_buf) & 0xF;
+                __dpmi_int(0x10, &regs);
+                if (regs.x.ax == 0x004F) {
+                    // Copy state from conventional memory to our heap so we
+                    // can free the low-memory buffer now.
+                    data->vbe_state_buffer = SDL_malloc(state_size);
+                    if (data->vbe_state_buffer) {
+                        SDL_memcpy(data->vbe_state_buffer, state_buf, state_size);
+                        data->vbe_state_buffer_size = state_size;
+                    }
+                }
+                DOS_FreeConventionalMemory(&state_seginfo);
+            }
+        }
+    }
+
     DOSVESA_InitMouse(device);
     DOSVESA_InitKeyboard(device);
 
@@ -460,10 +591,40 @@ static void DOSVESA_VideoQuit(SDL_VideoDevice *device)
         SDL_zero(data->mapping);
     }
 
-    // Force us back to text mode, in case we're not there.
+    // Restore saved VBE state if available.
+    if (data->vbe_state_buffer && data->vbe_state_buffer_size > 0) {
+        _go32_dpmi_seginfo restore_seginfo;
+        void *restore_buf = DOS_AllocateConventionalMemory(data->vbe_state_buffer_size, &restore_seginfo);
+        if (restore_buf) {
+            SDL_memcpy(restore_buf, data->vbe_state_buffer, data->vbe_state_buffer_size);
+            __dpmi_regs regs;
+            SDL_zero(regs);
+            regs.x.ax = 0x4F04;
+            regs.x.dx = 0x02;   // subfunction 2: restore state
+            regs.x.cx = 0x0F;   // all state
+            regs.x.es = DOS_LinearToPhysical(restore_buf) / 16;
+            regs.x.bx = DOS_LinearToPhysical(restore_buf) & 0xF;
+            __dpmi_int(0x10, &regs);
+            DOS_FreeConventionalMemory(&restore_seginfo);
+        }
+        SDL_free(data->vbe_state_buffer);
+        data->vbe_state_buffer = NULL;
+        data->vbe_state_buffer_size = 0;
+    }
+
+    // Also restore the original VBE mode.
     __dpmi_regs regs;
-    regs.x.ax = 0x03;
+    SDL_zero(regs);
+    regs.x.ax = 0x4F02;
+    regs.x.bx = data->original_vbe_mode;
     __dpmi_int(0x10, &regs);
+
+    // If VBE mode restore failed, fall back to text mode.
+    if (regs.x.ax != 0x004F) {
+        SDL_zero(regs);
+        regs.x.ax = 0x03;
+        __dpmi_int(0x10, &regs);
+    }
 
     SDL_zero(data->current_mode);
 
@@ -473,6 +634,8 @@ static void DOSVESA_VideoQuit(SDL_VideoDevice *device)
 
 static void DOSVESA_Destroy(SDL_VideoDevice *device)
 {
+    SDL_VideoData *data = device->internal;
+    SDL_free(data->vbe_state_buffer);
     SDL_free(device->internal);
     SDL_free(device);
     FreeVESAInfo();
@@ -504,6 +667,8 @@ static SDL_VideoDevice *DOSVESA_CreateDevice(void)
     device->free = DOSVESA_Destroy;
     device->VideoInit = DOSVESA_VideoInit;
     device->VideoQuit = DOSVESA_VideoQuit;
+    device->GetDisplayModes = DOSVESA_GetDisplayModes;
+    device->SetDisplayMode = DOSVESA_SetDisplayMode;
     device->CreateSDLWindow = DOSVESA_CreateWindow;
     device->DestroyWindow = DOSVESA_DestroyWindow;
     device->CreateWindowFramebuffer = DOSVESA_CreateWindowFramebuffer;

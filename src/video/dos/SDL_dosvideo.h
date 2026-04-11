@@ -53,6 +53,14 @@ struct SDL_VideoData
     SDL_DisplayMode current_mode;
     DOS_InterruptHook keyboard_interrupt_hook;
     Uint32 palette_version;  // tracks SDL_Palette::version to detect changes
+    Uint16 original_vbe_mode;      // VBE mode number at startup
+    void *vbe_state_buffer;        // saved VBE state (from VBE 0x4F04)
+    Uint32 vbe_state_buffer_size;  // size of the state buffer
+
+    // Page-flipping (double-buffering) state
+    int current_page;          // 0 or 1: which page is currently displayed
+    Uint32 page_offset[2];    // byte offset of each page within video memory
+    bool page_flip_available;  // true if mode supports double-buffering
 };
 
 struct SDL_DisplayData

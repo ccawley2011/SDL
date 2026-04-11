@@ -50,7 +50,9 @@ bool DOSVESA_CreateWindowFramebuffer(SDL_VideoDevice *device, SDL_Window *window
     }
 
     // we make a surface that uses video memory directly, so SDL can optimize the blit for us.
-    void *lfb_pixels = DOS_PhysicalToLinear(data->mapping.address);
+    // Point LFB surface at the back page (not currently displayed) for tear-free double-buffering.
+    int back_page = data->page_flip_available ? (1 - data->current_page) : 0;
+    void *lfb_pixels = (Uint8 *)DOS_PhysicalToLinear(data->mapping.address) + data->page_offset[back_page];
     SDL_Surface *lfb_surface = SDL_CreateSurfaceFrom(mode->w, mode->h, surface_format, lfb_pixels, mode->internal->pitch);
     if (!lfb_surface) {
         SDL_DestroySurface(surface);
@@ -62,9 +64,26 @@ bool DOSVESA_CreateWindowFramebuffer(SDL_VideoDevice *device, SDL_Window *window
     if (surface_format == SDL_PIXELFORMAT_INDEX8) {
         SDL_Palette *palette = SDL_CreateSurfacePalette(surface);
         if (palette) {
+            // Initialize palette to all-black so that transitions start
+            // from black instead of flashing uninitialized (white) colors.
+            SDL_Color black[256];
+            SDL_memset(black, 0, sizeof(black));
+            for (int i = 0; i < 256; i++) {
+                black[i].a = SDL_ALPHA_OPAQUE;
+            }
+            SDL_SetPaletteColors(palette, black, 0, 256);
             SDL_SetSurfacePalette(lfb_surface, palette);
         }
         data->palette_version = 0;  // force DAC update on first present
+
+        // Also program the VGA DAC to all-black right now, so no flash
+        // of stale/white palette colors before the first present.
+        outportb(0x3C8, 0);
+        for (int i = 0; i < 256; i++) {
+            outportb(0x3C9, 0);
+            outportb(0x3C9, 0);
+            outportb(0x3C9, 0);
+        }
     }
 
     // clear the framebuffer completely, in case another window at a larger size was using this before us.
@@ -101,6 +120,7 @@ bool DOSVESA_GetWindowFramebufferVSync(SDL_VideoDevice *device, SDL_Window *wind
 
 bool DOSVESA_UpdateWindowFramebuffer(SDL_VideoDevice *device, SDL_Window *window, const SDL_Rect *rects, int numrects)
 {
+    SDL_VideoData *vdata = device->internal;
     SDL_WindowData *windata = window->internal;
     SDL_Surface *src = (SDL_Surface *) SDL_GetPointerProperty(SDL_GetWindowProperties(window), DOS_SURFACE, NULL);
     if (!src) {
@@ -125,13 +145,13 @@ bool DOSVESA_UpdateWindowFramebuffer(SDL_VideoDevice *device, SDL_Window *window
         }
     }
 
-    // For 8-bit indexed modes, update VGA DAC palette if it changed.
-    // We check the window surface's palette (which the app updates via
-    // SDL_SetPaletteColors), NOT the internal DOS_SURFACE palette.
-    // SDL3 core wraps our pixels in a new SDL_Surface (window->surface)
-    // via SDL_CreateSurfaceFrom, so the app's palette lives there.
+    // For 8-bit indexed modes, sync palette data between surfaces so the
+    // blit uses the correct color mapping.  The actual VGA DAC programming
+    // is deferred until vertical blanking to avoid visible palette flicker.
+    SDL_Palette *dac_palette = NULL;
+    bool dac_needs_update = false;
+
     if (src->format == SDL_PIXELFORMAT_INDEX8) {
-        SDL_VideoData *vdata = device->internal;
         SDL_Palette *win_palette = window->surface ? SDL_GetSurfacePalette(window->surface) : NULL;
         SDL_Palette *src_palette = SDL_GetSurfacePalette(src);
 
@@ -149,28 +169,14 @@ bool DOSVESA_UpdateWindowFramebuffer(SDL_VideoDevice *device, SDL_Window *window
             }
         }
 
-        // Program the VGA DAC from whichever palette has data
-        SDL_Palette *dac_palette = win_palette ? win_palette : src_palette;
+        // Determine whether the VGA DAC needs reprogramming.
+        dac_palette = win_palette ? win_palette : src_palette;
         if (dac_palette && dac_palette->version != vdata->palette_version) {
-            vdata->palette_version = dac_palette->version;
-
-            outportb(0x3C8, 0);
-            for (int i = 0; i < dac_palette->ncolors && i < 256; i++) {
-                outportb(0x3C9, dac_palette->colors[i].r >> 2);
-                outportb(0x3C9, dac_palette->colors[i].g >> 2);
-                outportb(0x3C9, dac_palette->colors[i].b >> 2);
-            }
+            dac_needs_update = true;
         }
     }
 
-    // wait for vsync if necessary...
-    const int vsync_interval = windata->framebuffer_vsync;
-    for (int i = 0; i < vsync_interval; i++) {
-        while (!(inportb(0x3DA) & 0x08)) {
-            SDL_CPUPauseInstruction();
-        }
-    }
-
+    // Blit to the back page (or the only page, if no page-flipping)
     if (!SDL_BlitSurface(src, NULL, dst, &dstrect)) {
         return false;
     }
@@ -181,13 +187,69 @@ bool DOSVESA_UpdateWindowFramebuffer(SDL_VideoDevice *device, SDL_Window *window
         }
     }
 
+    if (vdata->page_flip_available) {
+        // Program the VGA DAC during the vertical retrace that the page
+        // flip waits for, so the new palette and new page appear together.
+        const SDL_DisplayModeData *mdata = vdata->current_mode.internal;
+        int back_page = 1 - vdata->current_page;
+        Uint16 first_scanline = (Uint16)(vdata->page_offset[back_page] / mdata->pitch);
+
+        // Wait for vblank start before touching the DAC or flipping.
+        while (inportb(0x3DA) & 0x08) { SDL_CPUPauseInstruction(); }  // wait for non-vblank
+        while (!(inportb(0x3DA) & 0x08)) { SDL_CPUPauseInstruction(); }  // wait for vblank
+
+        if (dac_needs_update) {
+            vdata->palette_version = dac_palette->version;
+            outportb(0x3C8, 0);
+            for (int i = 0; i < dac_palette->ncolors && i < 256; i++) {
+                outportb(0x3C9, dac_palette->colors[i].r >> 2);
+                outportb(0x3C9, dac_palette->colors[i].g >> 2);
+                outportb(0x3C9, dac_palette->colors[i].b >> 2);
+            }
+        }
+
+        // Flip: make the back page (which we just drew to) the visible page.
+        // Use subfunction 0x80 (set display start, don't wait) since we
+        // already waited for vblank above.
+        __dpmi_regs regs;
+        regs.x.ax = 0x4F07;
+        regs.x.bx = 0x0080;  // set display start, no wait (we already synced)
+        regs.x.cx = 0;       // first pixel in scan line
+        regs.x.dx = first_scanline;
+        __dpmi_int(0x10, &regs);
+
+        vdata->current_page = back_page;
+
+        // Update LFB surface to point at the new back page (the old front page)
+        int new_back = 1 - vdata->current_page;
+        dst->pixels = (Uint8 *)DOS_PhysicalToLinear(vdata->mapping.address) + vdata->page_offset[new_back];
+    } else {
+        // No page-flipping: wait for vsync, then update DAC atomically
+        const int vsync_interval = windata->framebuffer_vsync;
+        if (vsync_interval > 0 || dac_needs_update) {
+            while (inportb(0x3DA) & 0x08) { SDL_CPUPauseInstruction(); }  // wait for non-vblank
+            while (!(inportb(0x3DA) & 0x08)) { SDL_CPUPauseInstruction(); }  // wait for vblank
+        }
+
+        if (dac_needs_update) {
+            vdata->palette_version = dac_palette->version;
+            outportb(0x3C8, 0);
+            for (int i = 0; i < dac_palette->ncolors && i < 256; i++) {
+                outportb(0x3C9, dac_palette->colors[i].r >> 2);
+                outportb(0x3C9, dac_palette->colors[i].g >> 2);
+                outportb(0x3C9, dac_palette->colors[i].b >> 2);
+            }
+        }
+    }
+
     return true;
 }
 
 void DOSVESA_DestroyWindowFramebuffer(SDL_VideoDevice *device, SDL_Window *window)
 {
+    SDL_VideoData *data = device->internal;
     SDL_Surface *lfb_surface = (SDL_Surface *) SDL_GetPointerProperty(SDL_GetWindowProperties(window), DOS_LFB_SURFACE, NULL);
-    if (lfb_surface) {
+    if (lfb_surface && data->mapping.size) {
         SDL_ClearSurface(lfb_surface, 0.0f, 0.0f, 0.0f, 0.0f);
     }
     SDL_ClearProperty(SDL_GetWindowProperties(window), DOS_SURFACE);

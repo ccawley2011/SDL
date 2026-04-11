@@ -166,6 +166,15 @@ static bool DOSSOUNDBLASTER_OpenDevice(SDL_AudioDevice *device)
     outportb(0xD4, ~4 & hidden->dma_channel);  // unmask the DMA channel FIXME: is this different for low DMA?
 
     soundblaster_irq_fired = false;
+
+    // Lock ISR code and data to prevent page faults during interrupts
+    _go32_dpmi_lock_code((void *)SoundBlasterIRQHandler,
+        (unsigned long)SDL_DOS_LockAudioStream - (unsigned long)SoundBlasterIRQHandler);
+    _go32_dpmi_lock_data((void *)&opened_soundblaster_device, sizeof(opened_soundblaster_device));
+    _go32_dpmi_lock_data((void *)&soundblaster_irq_fired, sizeof(soundblaster_irq_fired));
+    _go32_dpmi_lock_data((void *)&audio_streams_locked, sizeof(audio_streams_locked));
+    _go32_dpmi_lock_data((void *)&soundblaster_base_port, sizeof(soundblaster_base_port));
+
     DOS_HookInterrupt(soundblaster_irq, SoundBlasterIRQHandler, &hidden->interrupt_hook);
 
     WriteSoundBlasterDSP(0xD1);  // turn on the speaker

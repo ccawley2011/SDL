@@ -40,6 +40,20 @@
 // this is DOS PC stuff, like interrupts and Intel i/o ports.
 #include <pc.h>
 
+// Lock a range of code so it won't be paged out during interrupts.
+// Usage: DOS_LockCode(function_name, function_end_label)
+// The function_end_label must be defined immediately after the function.
+#define DOS_LockCode(start, end) \
+    _go32_dpmi_lock_code((void *)(start), (char *)(end) - (char *)(start))
+
+// Lock a range of data so it won't be paged out during interrupts.
+#define DOS_LockData(var, size) \
+    _go32_dpmi_lock_data((void *)&(var), (size))
+
+// Lock a single variable.
+#define DOS_LockVariable(var) \
+    DOS_LockData(var, sizeof(var))
+
 // Set up for C function definitions, even when using C++
 #ifdef __cplusplus
 extern "C" {
