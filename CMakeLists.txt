@@ -3356,9 +3356,8 @@ elseif(DOS)
   sdl_glob_sources("${SDL3_SOURCE_DIR}/src/time/unix/*.c")
   set(HAVE_SDL_TIME TRUE)
 
-  # !!! FIXME
-  set(SDL_TIMER_UNIX 1)
-  sdl_glob_sources("${SDL3_SOURCE_DIR}/src/timer/unix/*.c")
+  set(SDL_TIMER_DOS 1)
+  sdl_glob_sources("${SDL3_SOURCE_DIR}/src/timer/dos/*.c")
   set(HAVE_SDL_TIMERS TRUE)
 
 elseif(NGAGE)
