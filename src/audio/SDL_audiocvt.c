@@ -840,7 +840,7 @@ static bool PutAudioStreamBufferInternal(SDL_AudioStream *stream, const SDL_Audi
 
 static bool PutAudioStreamBuffer(SDL_AudioStream *stream, const void *buf, int len, SDL_ReleaseAudioBufferCallback callback, void *userdata)
 {
-#if 1 // DEBUG_AUDIOSTREAM
+#if DEBUG_AUDIOSTREAM
     SDL_Log("AUDIOSTREAM: wants to put %d bytes", len);
 #endif
 

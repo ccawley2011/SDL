@@ -28,6 +28,10 @@
 #include "../../events/SDL_keyboard_c.h"
 #include "../SDL_sysvideo.h"
 #include "SDL_dosvideo.h"
+
+#ifdef SDL_AUDIO_DRIVER_DOS_SOUNDBLASTER
+#include "../../audio/dos/SDL_dosaudio_sb.h"
+#endif
 #include "SDL_dosevents_c.h"
 
 // Scancode table: https://www.plantation-productions.com/Webster/www.artofasm.com/DOS/pdf/apndxc.pdf
@@ -237,6 +241,10 @@ static int keyevents_tail = 0;
 
 void DOSVESA_PumpEvents(SDL_VideoDevice *device)
 {
+#ifdef SDL_AUDIO_DRIVER_DOS_SOUNDBLASTER
+    SDL_DOS_PumpAudio();
+#endif
+
     static bool is_extended = false;
     static int pause_sequence_remaining = 0;
 

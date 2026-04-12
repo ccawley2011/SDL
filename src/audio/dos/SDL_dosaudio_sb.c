@@ -62,14 +62,37 @@ static Uint8 ReadSoundBlasterDSP(void)
 
 volatile int audio_streams_locked = 0;
 static SDL_AudioDevice *opened_soundblaster_device = NULL;
-static volatile bool soundblaster_irq_fired = false;
+static volatile bool soundblaster_irq_pending = false;
+static volatile int soundblaster_irq_count = 0;
+static volatile int soundblaster_mix_count = 0;
+// These are copies of the values from hidden, cached here so the IRQ handler
+// can access them without chasing pointers into potentially-unlocked memory.
+static volatile Uint8 *isr_dma_buffer = NULL;
+static volatile int isr_dma_halfdma = 0;
+static volatile int isr_dma_channel = 0;
 static void SoundBlasterIRQHandler(void)  // this is wrapped in a thing that handles IRET, etc.
 {
-    if (opened_soundblaster_device) {
-        if (audio_streams_locked) {
-            soundblaster_irq_fired = true;  // will need to handle this during unlock.
-        } else {
-            SDL_PlaybackAudioThreadIterate(opened_soundblaster_device);
+    // Set flag and acknowledge hardware. The actual mixing happens in
+    // SDL_DOS_PumpAudio() called from the main loop. We cannot call
+    // SDL_PlaybackAudioThreadIterate() here (reentrancy issues with malloc, etc.).
+    soundblaster_irq_pending = true;
+    soundblaster_irq_count++;
+
+    // If the main loop hasn't mixed since the last IRQ, the half-buffer that just
+    // finished is stale. Silence it so the hardware plays silence instead of
+    // repeating old audio (prevents stuttering/noise during load screens).
+    // We use an inline loop instead of SDL_memset to avoid calling library functions
+    // that may not be in locked memory.
+    if (isr_dma_buffer && (soundblaster_irq_count - soundblaster_mix_count) > 1) {
+        const int halfdma = isr_dma_halfdma;
+        const int ch = isr_dma_channel;
+        // Read DMA position to find which half is currently playing, then silence the OTHER half.
+        int count = (int) inportb(0xc0 + (ch - 4) * 4 + 2);
+        count += (int) inportb(0xc0 + (ch - 4) * 4 + 2) << 8;
+        volatile Uint8 *stale_half = isr_dma_buffer + (count < (halfdma / 2) ? halfdma : 0);
+        int i;
+        for (i = 0; i < halfdma; i++) {
+            stale_half[i] = 0;
         }
     }
 
@@ -77,9 +100,28 @@ static void SoundBlasterIRQHandler(void)  // this is wrapped in a thing that han
     DOS_EndOfInterrupt();
 }
 
-// this is sort of hacky, but we need to make sure the audio interrupt doesn't
-//  run while an audio stream is locked, since we don't have real mutexes, and
-//  this is as close to multithreaded as we'll be getting for now.
+// Called from the main loop (via DOSVESA_PumpEvents → SDL_DOS_PumpAudio) to
+// run the audio mixing pipeline in normal (non-IRQ) context.
+void SDL_DOS_PumpAudio(void)
+{
+    if (!opened_soundblaster_device) {
+        return;
+    }
+
+    // Check-and-clear atomically w.r.t. the IRQ by bracketing with cli/sti.
+    DOS_DisableInterrupts();
+    const bool pending = soundblaster_irq_pending;
+    soundblaster_irq_pending = false;
+    DOS_EnableInterrupts();
+
+    if (pending && audio_streams_locked == 0) {
+        SDL_PlaybackAudioThreadIterate(opened_soundblaster_device);
+        soundblaster_mix_count = soundblaster_irq_count;
+    }
+}
+
+// this is sort of hacky, but we need to make sure the audio mixing doesn't
+//  run while an audio stream is locked, since we don't have real mutexes.
 // !!! FIXME: we should probably do this only for streams bound to an audio
 // !!! FIXME: device, but good enough for now.
 void SDL_DOS_LockAudioStream(SDL_AudioStream *stream)
@@ -94,14 +136,7 @@ void SDL_DOS_UnlockAudioStream(SDL_AudioStream *stream)
     DOS_DisableInterrupts();
 
     if (audio_streams_locked > 0) {
-        if (--audio_streams_locked == 0) {
-            if (opened_soundblaster_device && soundblaster_irq_fired) {
-                // uhoh, IRQ fired while we were locked, run an iteration right now to catch up!
-                // if you locked for a _really_ long time, you're going to get skips, but we can't help you there.
-                soundblaster_irq_fired = false;
-                SDL_PlaybackAudioThreadIterate(opened_soundblaster_device);
-            }
-        }
+        --audio_streams_locked;
     }
 
     DOS_EnableInterrupts();
@@ -113,13 +148,22 @@ static bool DOSSOUNDBLASTER_OpenDevice(SDL_AudioDevice *device)
     // Although note that while an audio device can offer less than this--and will with pre-SB16 devices--this
     // is actually the minimum SDL will ever request, since it wants to make sure a low-quality logical device
     // doesn't force the hardware to low quality for future logical devices.
+    // !!! FIXME: some things are hardcoded for 16-bit stereo below; the DMA setup code needs work for other formats.
     device->spec.format = SDL_AUDIO_S16LE;
     device->spec.channels = 2;
-    device->spec.freq = 44100;
+    // SDL3's audio layer enforces a 44100 Hz minimum before calling us, but the
+    // comment in OpenPhysicalAudioDevice says "The backend may change any of these
+    // values during OpenDevice method!" — and on DOS we want 22050 Hz to match the
+    // game's native audio, halve the mixing/resampling work, and double the effective
+    // DMA buffer duration (reducing stutter when frames take longer than expected).
+    device->spec.freq = 22050;
     device->sample_frames = SDL_GetDefaultSampleFramesFromFreq(device->spec.freq);
 
     // Calculate the final parameters for this audio specification
     SDL_UpdatedAudioDeviceFormat(device);
+
+    SDL_Log("SOUNDBLASTER: Opening at %d Hz, %d channels, format 0x%X, %d sample frames",
+            device->spec.freq, device->spec.channels, device->spec.format, device->sample_frames);
 
     if (device->buffer_size > (32 * 1024)) {
         return SDL_SetError("Buffer size is too large (choose smaller audio format and/or less sample frames");  // DMA buffer has to fit in 64K segment, so buffer_size has to be half that, as we double it.
@@ -165,14 +209,27 @@ static bool DOSSOUNDBLASTER_OpenDevice(SDL_AudioDevice *device)
     outportb(0xDC, 0);  // clear the write mask.
     outportb(0xD4, ~4 & hidden->dma_channel);  // unmask the DMA channel FIXME: is this different for low DMA?
 
-    soundblaster_irq_fired = false;
+    soundblaster_irq_pending = false;
+    soundblaster_irq_count = 0;
+    soundblaster_mix_count = 0;
 
-    // Lock ISR code and data to prevent page faults during interrupts
+    // Cache DMA parameters in globals so the IRQ handler can access them
+    // without chasing pointers through potentially-unlocked heap memory.
+    isr_dma_buffer = hidden->dma_buffer;
+    isr_dma_halfdma = hidden->dma_buflen / 2;
+    isr_dma_channel = hidden->dma_channel;
+
+    // Lock ISR code and data to prevent page faults during interrupts.
+    // The IRQ handler only touches these globals and the DMA buffer (which is
+    // in conventional memory and always physically mapped).
     _go32_dpmi_lock_code((void *)SoundBlasterIRQHandler,
-        (unsigned long)SDL_DOS_LockAudioStream - (unsigned long)SoundBlasterIRQHandler);
-    _go32_dpmi_lock_data((void *)&opened_soundblaster_device, sizeof(opened_soundblaster_device));
-    _go32_dpmi_lock_data((void *)&soundblaster_irq_fired, sizeof(soundblaster_irq_fired));
-    _go32_dpmi_lock_data((void *)&audio_streams_locked, sizeof(audio_streams_locked));
+        (unsigned long)SDL_DOS_PumpAudio - (unsigned long)SoundBlasterIRQHandler);
+    _go32_dpmi_lock_data((void *)&soundblaster_irq_pending, sizeof(soundblaster_irq_pending));
+    _go32_dpmi_lock_data((void *)&soundblaster_irq_count, sizeof(soundblaster_irq_count));
+    _go32_dpmi_lock_data((void *)&soundblaster_mix_count, sizeof(soundblaster_mix_count));
+    _go32_dpmi_lock_data((void *)&isr_dma_buffer, sizeof(isr_dma_buffer));
+    _go32_dpmi_lock_data((void *)&isr_dma_halfdma, sizeof(isr_dma_halfdma));
+    _go32_dpmi_lock_data((void *)&isr_dma_channel, sizeof(isr_dma_channel));
     _go32_dpmi_lock_data((void *)&soundblaster_base_port, sizeof(soundblaster_base_port));
 
     DOS_HookInterrupt(soundblaster_irq, SoundBlasterIRQHandler, &hidden->interrupt_hook);
@@ -231,7 +288,12 @@ static void DOSSOUNDBLASTER_CloseDevice(SDL_AudioDevice *device)
             DOS_FreeConventionalMemory(&hidden->dma_seginfo);
         }
 
-        soundblaster_irq_fired = false;
+        soundblaster_irq_pending = false;
+        soundblaster_irq_count = 0;
+        soundblaster_mix_count = 0;
+        isr_dma_buffer = NULL;
+        isr_dma_halfdma = 0;
+        isr_dma_channel = 0;
         opened_soundblaster_device = NULL;
 
         SDL_free(hidden);
