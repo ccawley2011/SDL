@@ -3360,6 +3360,10 @@ elseif(DOS)
   sdl_glob_sources("${SDL3_SOURCE_DIR}/src/timer/dos/*.c")
   set(HAVE_SDL_TIMERS TRUE)
 
+  set(SDL_JOYSTICK_DOS 1)
+  sdl_glob_sources("${SDL3_SOURCE_DIR}/src/joystick/dos/*.c")
+  set(HAVE_SDL_JOYSTICK TRUE)
+
 elseif(NGAGE)
 
   enable_language(CXX)
