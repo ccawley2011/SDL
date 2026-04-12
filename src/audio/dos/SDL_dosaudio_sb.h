@@ -31,6 +31,7 @@ struct SDL_PrivateAudioData
     Uint8 *dma_buffer;
     size_t dma_buflen;
     int dma_channel;
+    bool is_16bit;
     _go32_dpmi_seginfo dma_seginfo;
     DOS_InterruptHook interrupt_hook;
 };
