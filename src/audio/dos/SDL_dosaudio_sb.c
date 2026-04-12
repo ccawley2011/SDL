@@ -69,63 +69,17 @@ static Uint8 ReadSoundBlasterDSP(void)
 volatile int audio_streams_locked = 0;
 static SDL_AudioDevice *opened_soundblaster_device = NULL;
 static volatile bool soundblaster_irq_pending = false;
-static volatile int soundblaster_irq_count = 0;
-static volatile int soundblaster_mix_count = 0;
-// These are copies of the values from hidden, cached here so the IRQ handler
-// can access them without chasing pointers into potentially-unlocked memory.
-static volatile Uint8 *isr_dma_buffer = NULL;
-static volatile int isr_dma_halfdma = 0;
-static volatile int isr_dma_channel = 0;
+
+// ISR-cached copies of device state (avoids chasing heap pointers in IRQ context).
 static volatile int isr_irq_ack_port = 0;
-static volatile Uint8 isr_silence_value = 0;
-static volatile bool isr_is_16bit = false;
+
 static void SoundBlasterIRQHandler(void)  // this is wrapped in a thing that handles IRET, etc.
 {
     // Set flag and acknowledge hardware. The actual mixing happens in
-    // SDL_DOS_PumpAudio() called from the main loop. We cannot call
-    // SDL_PlaybackAudioThreadIterate() here (reentrancy issues with malloc, etc.).
+    // SDL_DOS_PumpAudio() called from the main loop.
     soundblaster_irq_pending = true;
-    soundblaster_irq_count++;
 
-    // If the main loop hasn't mixed since the last IRQ, the half-buffer that just
-    // finished is stale. Silence it so the hardware plays silence instead of
-    // repeating old audio (prevents stuttering/noise during load screens).
-    // We use an inline loop instead of SDL_memset to avoid calling library functions
-    // that may not be in locked memory.
-    if (isr_dma_buffer && (soundblaster_irq_count - soundblaster_mix_count) > 1) {
-        const int halfdma = isr_dma_halfdma;
-        const int ch = isr_dma_channel;
-        const Uint8 silence = isr_silence_value;
-        int count;
-        // Read DMA position to find which half is currently playing, then silence the OTHER half.
-        if (isr_is_16bit) {
-            // High DMA (16-bit, channels 5-7): ports in 0xC0+ range, counts in words
-            count = (int) inportb(0xC0 + (ch - 4) * 4 + 2);
-            count += (int) inportb(0xC0 + (ch - 4) * 4 + 2) << 8;
-            // count is in 16-bit words; halfdma is in bytes, so compare against halfdma/2
-            {
-                volatile Uint8 *stale_half = isr_dma_buffer + (count < (halfdma / 2) ? halfdma : 0);
-                int i;
-                for (i = 0; i < halfdma; i++) {
-                    stale_half[i] = silence;
-                }
-            }
-        } else {
-            // Low DMA (8-bit, channels 0-3): ports in 0x00+ range, counts in bytes
-            count = (int) inportb(ch * 2 + 1);
-            count += (int) inportb(ch * 2 + 1) << 8;
-            // count is in bytes; halfdma is in bytes, so compare directly
-            {
-                volatile Uint8 *stale_half = isr_dma_buffer + (count < halfdma ? halfdma : 0);
-                int i;
-                for (i = 0; i < halfdma; i++) {
-                    stale_half[i] = silence;
-                }
-            }
-        }
-    }
-
-    inportb(isr_irq_ack_port);  // acknowledge the interrupt by reading this port. Makes the SB stop pulling the line.
+    inportb(isr_irq_ack_port);  // acknowledge the interrupt
     DOS_EndOfInterrupt();
 }
 
@@ -145,7 +99,6 @@ void SDL_DOS_PumpAudio(void)
 
     if (pending && audio_streams_locked == 0) {
         SDL_PlaybackAudioThreadIterate(opened_soundblaster_device);
-        soundblaster_mix_count = soundblaster_irq_count;
     }
 }
 
@@ -179,10 +132,13 @@ static bool DOSSOUNDBLASTER_OpenDevice(SDL_AudioDevice *device)
         // SB16 (DSP >= 4): 16-bit stereo signed
         device->spec.format = SDL_AUDIO_S16LE;
         device->spec.channels = 2;
+    } else if (soundblaster_version >= 3) {
+        // SB Pro (DSP 3.x): 8-bit stereo unsigned.
+        // Max 22050 Hz in stereo (hardware interleaves L/R at double the rate).
+        device->spec.format = SDL_AUDIO_U8;
+        device->spec.channels = 2;
     } else {
-        // Pre-SB16 (DSP < 4): 8-bit mono unsigned.
-        // SB Pro (DSP 3.x) can do stereo but the effective sample rate halves;
-        // SB 2.0 (DSP 2.x) and SB 1.x are mono-only. Keep mono for simplicity.
+        // SB 2.0 (DSP 2.x) and SB 1.x: 8-bit mono unsigned.
         device->spec.format = SDL_AUDIO_U8;
         device->spec.channels = 1;
     }
@@ -192,10 +148,9 @@ static bool DOSSOUNDBLASTER_OpenDevice(SDL_AudioDevice *device)
     // clamp to hardware limits:
     //   SB 1.x: max ~23 kHz mono
     //   SB 2.0 (DSP 2.x): max 44100 Hz mono (high-speed), ~23 kHz normal
-    //   SB Pro (DSP 3.x): max 44100 Hz mono, 22050 Hz stereo
-    // Since we use mono for all pre-SB16, 22050 Hz is safe for all models.
+    //   SB Pro (DSP 3.x): max 22050 Hz stereo, max 44100 Hz mono
     if (!is_sb16 && device->spec.freq > 22050) {
-        device->spec.freq = 22050;  // clamp to safe max for pre-SB16 mono
+        device->spec.freq = 22050;  // clamp to safe max for pre-SB16
     }
     device->sample_frames = SDL_GetDefaultSampleFramesFromFreq(device->spec.freq);
 
@@ -268,33 +223,16 @@ static bool DOSSOUNDBLASTER_OpenDevice(SDL_AudioDevice *device)
     }
 
     soundblaster_irq_pending = false;
-    soundblaster_irq_count = 0;
-    soundblaster_mix_count = 0;
 
-    // Cache DMA parameters in globals so the IRQ handler can access them
-    // without chasing pointers through potentially-unlocked heap memory.
-    isr_dma_buffer = hidden->dma_buffer;
-    isr_dma_halfdma = hidden->dma_buflen / 2;
-    isr_dma_channel = hidden->dma_channel;
-    isr_irq_ack_port = soundblaster_base_port + (is_sb16 ? 0x0F : 0x0E);
-    isr_silence_value = soundblaster_silence_value;
-    isr_is_16bit = is_sb16;
+    // Cache the IRQ ack port so the ISR doesn't chase pointers.
+    isr_irq_ack_port = is_sb16 ? (soundblaster_base_port + 0x0F) : (soundblaster_base_port + 0x0E);
 
     // Lock ISR code and data to prevent page faults during interrupts.
-    // The IRQ handler only touches these globals and the DMA buffer (which is
-    // in conventional memory and always physically mapped).
+    // The ISR is minimal: just sets a flag and acknowledges the hardware.
     _go32_dpmi_lock_code((void *)SoundBlasterIRQHandler,
         (unsigned long)SDL_DOS_PumpAudio - (unsigned long)SoundBlasterIRQHandler);
     _go32_dpmi_lock_data((void *)&soundblaster_irq_pending, sizeof(soundblaster_irq_pending));
-    _go32_dpmi_lock_data((void *)&soundblaster_irq_count, sizeof(soundblaster_irq_count));
-    _go32_dpmi_lock_data((void *)&soundblaster_mix_count, sizeof(soundblaster_mix_count));
-    _go32_dpmi_lock_data((void *)&isr_dma_buffer, sizeof(isr_dma_buffer));
-    _go32_dpmi_lock_data((void *)&isr_dma_halfdma, sizeof(isr_dma_halfdma));
-    _go32_dpmi_lock_data((void *)&isr_dma_channel, sizeof(isr_dma_channel));
     _go32_dpmi_lock_data((void *)&isr_irq_ack_port, sizeof(isr_irq_ack_port));
-    _go32_dpmi_lock_data((void *)&isr_silence_value, sizeof(isr_silence_value));
-    _go32_dpmi_lock_data((void *)&isr_is_16bit, sizeof(isr_is_16bit));
-    _go32_dpmi_lock_data((void *)&soundblaster_base_port, sizeof(soundblaster_base_port));
 
     DOS_HookInterrupt(soundblaster_irq, SoundBlasterIRQHandler, &hidden->interrupt_hook);
 
@@ -317,11 +255,25 @@ static bool DOSSOUNDBLASTER_OpenDevice(SDL_AudioDevice *device)
         WriteSoundBlasterDSP((Uint8) (block_size >> 8));
     } else {
         // Pre-SB16 (DSP < 4): set sample rate via Time Constant
-        // Time Constant = 256 - (1000000 / freq)
-        // For 22050 Hz mono: TC = 256 - 45 = 211 (0xD3)
-        const Uint8 time_constant = (Uint8)(256 - (1000000 / device->spec.freq));
+        // Time Constant = 256 - (1000000 / (channels * freq))
+        // In stereo mode the SB Pro interleaves L/R samples, so the effective
+        // hardware rate is channels * freq.
+        const int effective_rate = device->spec.channels * device->spec.freq;
+        const Uint8 time_constant = (Uint8)(256 - (1000000 / effective_rate));
         WriteSoundBlasterDSP(0x40);  // set time constant
         WriteSoundBlasterDSP(time_constant);
+
+        // SB Pro (DSP 3.x): enable or disable stereo via mixer register 0x0E
+        if (soundblaster_version >= 3) {
+            const int mixer_addr = soundblaster_base_port + 0x04;
+            const int mixer_data = soundblaster_base_port + 0x05;
+            outportb(mixer_addr, 0x0E);  // select output/stereo register
+            if (device->spec.channels == 2) {
+                outportb(mixer_data, inportb(mixer_data) | 0x02);   // set bit 1 = stereo
+            } else {
+                outportb(mixer_data, inportb(mixer_data) & ~0x02);  // clear bit 1 = mono
+            }
+        }
 
         // start 8-bit auto-initialize DMA mode
         // block_size is in bytes for 8-bit, and it's the half-buffer size minus 1
@@ -375,6 +327,14 @@ static void DOSSOUNDBLASTER_CloseDevice(SDL_AudioDevice *device)
             WriteSoundBlasterDSP(0xD0);  // halt 8-bit DMA
             WriteSoundBlasterDSP(0xDA);  // exit auto-init DMA
             WriteSoundBlasterDSP(0xD3);  // turn off the speaker
+
+            // SB Pro: reset stereo bit in mixer register 0x0E
+            if (soundblaster_version >= 3) {
+                const int mixer_addr = soundblaster_base_port + 0x04;
+                const int mixer_data = soundblaster_base_port + 0x05;
+                outportb(mixer_addr, 0x0E);
+                outportb(mixer_data, inportb(mixer_data) & ~0x02);  // clear stereo bit
+            }
         }
 
         DOS_UnhookInterrupt(&hidden->interrupt_hook, true);
@@ -390,14 +350,7 @@ static void DOSSOUNDBLASTER_CloseDevice(SDL_AudioDevice *device)
         }
 
         soundblaster_irq_pending = false;
-        soundblaster_irq_count = 0;
-        soundblaster_mix_count = 0;
-        isr_dma_buffer = NULL;
-        isr_dma_halfdma = 0;
-        isr_dma_channel = 0;
         isr_irq_ack_port = 0;
-        isr_silence_value = 0;
-        isr_is_16bit = false;
         opened_soundblaster_device = NULL;
 
         SDL_free(hidden);
