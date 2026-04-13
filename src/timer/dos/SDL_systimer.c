@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2026 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -51,31 +51,46 @@ Uint64 SDL_GetPerformanceFrequency(void)
 
 void SDL_SYS_DelayNS(Uint64 ns)
 {
-    /* For delays >= 1 ms, use DJGPP's delay() which yields to the DPMI host.
-       For sub-millisecond delays, busy-wait on uclock().
+    if (ns == 0) {
+        DOS_Yield();
+        return;
+    }
+
+    /* Track wall-clock time so that time spent in DOS_Yield() (running other
+       cooperative threads) counts towards the requested delay.
        We periodically call DOS_Yield() so cooperative threads can run. */
-    if (ns >= SDL_NS_PER_MS) {
-        Uint32 ms = (Uint32)(ns / SDL_NS_PER_MS);
-        while (ms > 0) {
-            Uint32 chunk = ms;
+    const uclock_t delay_start = uclock();
+    const uclock_t target_ticks = (uclock_t)((ns * UCLOCKS_PER_SEC) / SDL_NS_PER_SECOND);
+
+    while ((uclock() - delay_start) < target_ticks) {
+        uclock_t remaining = target_ticks - (uclock() - delay_start);
+        Uint32 remaining_ms = (Uint32)(remaining / (UCLOCKS_PER_SEC / 1000));
+
+        if (remaining_ms < 1) {
+            break; /* sub-millisecond remainder: busy-wait below */
+        }
+
+        Uint32 chunk = remaining_ms;
+        if (chunk > DOS_YIELD_INTERVAL_MS) {
+            chunk = DOS_YIELD_INTERVAL_MS;
+        }
+        DOS_Yield();
+
+        /* Recalculate after yield. Other threads may have consumed time. */
+        remaining = target_ticks - (uclock() - delay_start);
+        remaining_ms = (Uint32)(remaining / (UCLOCKS_PER_SEC / 1000));
+        if (remaining_ms > 0) {
+            chunk = remaining_ms;
             if (chunk > DOS_YIELD_INTERVAL_MS) {
                 chunk = DOS_YIELD_INTERVAL_MS;
             }
-            DOS_Yield();
             delay(chunk);
-            DOS_Yield();
-            ms -= chunk;
         }
-        ns -= (Uint64)((Uint32)(ns / SDL_NS_PER_MS)) * SDL_NS_PER_MS;
     }
 
     /* Busy-wait for any remaining sub-millisecond portion */
-    if (ns > 0) {
-        const uclock_t target_ticks = (uclock_t)((ns * UCLOCKS_PER_SEC) / SDL_NS_PER_SECOND);
-        const uclock_t start = uclock();
-        while ((uclock() - start) < target_ticks) {
-            /* spin */
-        }
+    while ((uclock() - delay_start) < target_ticks) {
+        /* spin */
     }
 }
 

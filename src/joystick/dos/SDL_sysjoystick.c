@@ -31,6 +31,12 @@
 
 #define GAMEPORT 0x201
 
+/* Gameport status byte button bits (active low) */
+#define GAMEPORT_BUTTON1 0x10 /* bit 4 */
+#define GAMEPORT_BUTTON2 0x20 /* bit 5 */
+#define GAMEPORT_BUTTON3 0x40 /* bit 6 */
+#define GAMEPORT_BUTTON4 0x80 /* bit 7 */
+
 /* Static state for detection */
 static bool dos_joystick_detected = false;
 static SDL_JoystickID dos_joystick_id = 0;
@@ -263,10 +269,10 @@ static void DOS_JoystickUpdate(SDL_Joystick *joystick)
 
     /* Buttons are a passive port read (no timing loop), always safe to poll */
     val = inportb(GAMEPORT);
-    SDL_SendJoystickButton(0, joystick, 0, !(val & 0x10)); /* button 1 */
-    SDL_SendJoystickButton(0, joystick, 1, !(val & 0x20)); /* button 2 */
-    SDL_SendJoystickButton(0, joystick, 2, !(val & 0x40)); /* button 3 */
-    SDL_SendJoystickButton(0, joystick, 3, !(val & 0x80)); /* button 4 */
+    SDL_SendJoystickButton(0, joystick, 0, !(val & GAMEPORT_BUTTON1));
+    SDL_SendJoystickButton(0, joystick, 1, !(val & GAMEPORT_BUTTON2));
+    SDL_SendJoystickButton(0, joystick, 2, !(val & GAMEPORT_BUTTON3));
+    SDL_SendJoystickButton(0, joystick, 3, !(val & GAMEPORT_BUTTON4));
 
     /* Throttle axis reads — BIOS INT 15h subfunction 1 does an internal
        timing loop that is very expensive. ~60 Hz is more than enough for

@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2026 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -102,10 +102,10 @@ void DOS_HookInterrupt(int irq, DOS_InterruptHookFn fn, DOS_InterruptHook *hook)
 
     // enable interrupt on the correct PIC
     if (irq > 7) {
-        outportb(0xA1, inportb(0xA1) & ~(1 << (irq - 8))); // unmask on slave PIC
-        outportb(0x21, inportb(0x21) & ~(1 << 2));         // ensure cascade (IRQ2) is unmasked
+        outportb(PIC2_DATA, inportb(PIC2_DATA) & ~(1 << (irq - 8))); // unmask on slave PIC
+        outportb(PIC1_DATA, inportb(PIC1_DATA) & ~(1 << 2));         // ensure cascade (IRQ2) is unmasked
     } else {
-        outportb(0x21, inportb(0x21) & ~(1 << irq)); // unmask on master PIC
+        outportb(PIC1_DATA, inportb(PIC1_DATA) & ~(1 << irq)); // unmask on master PIC
     }
 }
 
@@ -120,9 +120,9 @@ void DOS_UnhookInterrupt(DOS_InterruptHook *hook, bool disable_interrupt)
 
     if (disable_interrupt) {
         if (hook->irq > 7) {
-            outportb(0xA1, inportb(0xA1) | (1 << (hook->irq - 8))); // mask on slave PIC
+            outportb(PIC2_DATA, inportb(PIC2_DATA) | (1 << (hook->irq - 8))); // mask on slave PIC
         } else {
-            outportb(0x21, inportb(0x21) | (1 << hook->irq)); // mask on master PIC
+            outportb(PIC1_DATA, inportb(PIC1_DATA) | (1 << hook->irq)); // mask on master PIC
         }
     }
 

@@ -19,32 +19,15 @@
   3. This notice may not be removed or altered from any source distribution.
 */
 
-#include "../SDL_main_callbacks.h"
+#ifndef SDL_dosmodes_h_
+#define SDL_dosmodes_h_
+
 #include "SDL_internal.h"
 
-#ifdef SDL_PLATFORM_DOS
+extern bool DOSVESA_GetDisplayModes(SDL_VideoDevice *device, SDL_VideoDisplay *sdl_display);
+extern bool DOSVESA_SetDisplayMode(SDL_VideoDevice *device, SDL_VideoDisplay *sdl_display, SDL_DisplayMode *mode);
+extern bool DOSVESA_SupportsVESA(void);
+extern void DOSVESA_FreeVESAInfo(void);
+extern Uint32 DOSVESA_GetVESATotalMemory(void);
 
-#include <sys/nearptr.h>
-
-// this locks .data, .bss, .text, and the stack. In SDL_RunApp(), we'll adjust this flag so future malloc() calls aren't locked by default.
-#include <crt0.h>
-int _crt0_startup_flags = _CRT0_FLAG_LOCK_MEMORY; // | _CRT0_FLAG_NONMOVE_SBRK;
-
-const char *SDL_argv0 = NULL;
-
-int SDL_RunApp(int argc, char *argv[], SDL_main_func mainFunction, void *reserved)
-{
-    (void)reserved;
-    _crt0_startup_flags &= ~_CRT0_FLAG_LOCK_MEMORY; // don't lock further allocations by default...so data, code, and stack are locked but not buffers from future malloc() calls.
-
-    if (!__djgpp_nearptr_enable()) {
-        fprintf(stderr, "__djgpp_nearptr_enable() failed!\n");
-        return 1;
-    }
-
-    SDL_argv0 = argv ? argv[0] : NULL;
-
-    return SDL_CallMainFunction(argc, argv, mainFunction);
-}
-
-#endif
+#endif // SDL_dosmodes_h_

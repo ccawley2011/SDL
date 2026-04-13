@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2026 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -28,9 +28,11 @@
 #include "../../core/dos/SDL_dos.h"
 #include "../../core/dos/SDL_dos_scheduler.h"
 
+#define MUTEX_NO_OWNER -1
+
 struct SDL_Mutex
 {
-    volatile int owner;     /* Thread ID of owner, or -1 if unlocked */
+    volatile int owner;     /* Thread ID of owner, or MUTEX_NO_OWNER if unlocked */
     volatile int recursive; /* Recursion count */
 };
 
@@ -38,7 +40,7 @@ SDL_Mutex *SDL_CreateMutex(void)
 {
     SDL_Mutex *mutex = (SDL_Mutex *)SDL_malloc(sizeof(*mutex));
     if (mutex) {
-        mutex->owner = -1;
+        mutex->owner = MUTEX_NO_OWNER;
         mutex->recursive = 0;
     }
     return mutex;
@@ -61,22 +63,18 @@ void SDL_LockMutex(SDL_Mutex *mutex) SDL_NO_THREAD_SAFETY_ANALYSIS
 
     for (;;) {
         DOS_DisableInterrupts();
-        if (mutex->owner == -1) {
-            /* Mutex is free — acquire it */
+        if (mutex->owner == MUTEX_NO_OWNER) {
             mutex->owner = tid;
             mutex->recursive = 1;
             DOS_EnableInterrupts();
             return;
         }
         if (mutex->owner == tid) {
-            /* We already own it — recursive lock */
             mutex->recursive++;
             DOS_EnableInterrupts();
             return;
         }
         DOS_EnableInterrupts();
-
-        /* Contention — yield and try again */
         DOS_Yield();
     }
 }
@@ -90,7 +88,7 @@ bool SDL_TryLockMutex(SDL_Mutex *mutex)
     int tid = DOS_GetCurrentThreadID();
 
     DOS_DisableInterrupts();
-    if (mutex->owner == -1) {
+    if (mutex->owner == MUTEX_NO_OWNER) {
         mutex->owner = tid;
         mutex->recursive = 1;
         DOS_EnableInterrupts();
@@ -115,7 +113,7 @@ void SDL_UnlockMutex(SDL_Mutex *mutex) SDL_NO_THREAD_SAFETY_ANALYSIS
     if (mutex->recursive > 1) {
         mutex->recursive--;
     } else {
-        mutex->owner = -1;
+        mutex->owner = MUTEX_NO_OWNER;
         mutex->recursive = 0;
     }
     DOS_EnableInterrupts();

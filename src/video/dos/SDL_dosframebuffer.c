@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2026 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -31,6 +31,14 @@
 
 #include <pc.h>           // for inportb, outportb
 #include <sys/movedata.h> // for dosmemput (banked framebuffer writes)
+
+// VGA DAC (Digital-to-Analog Converter) ports for palette programming
+#define VGA_DAC_WRITE_INDEX 0x3C8 // write index register (set starting color index)
+#define VGA_DAC_DATA        0x3C9 // data register (write R, G, B in sequence)
+
+// VGA Input Status Register 1 (for vblank detection)
+#define VGA_STATUS_PORT   0x3DA
+#define VGA_STATUS_VBLANK 0x08 // bit 3: vertical retrace active
 
 // note that DOS_SURFACE's value is the same string that the dummy driver uses.
 #define DOS_SURFACE     "SDL.internal.window.surface"
@@ -87,11 +95,11 @@ bool DOSVESA_CreateWindowFramebuffer(SDL_VideoDevice *device, SDL_Window *window
 
         // Also program the VGA DAC to all-black right now, so no flash
         // of stale/white palette colors before the first present.
-        outportb(0x3C8, 0);
+        outportb(VGA_DAC_WRITE_INDEX, 0);
         for (int i = 0; i < 256; i++) {
-            outportb(0x3C9, 0);
-            outportb(0x3C9, 0);
-            outportb(0x3C9, 0);
+            outportb(VGA_DAC_DATA, 0);
+            outportb(VGA_DAC_DATA, 0);
+            outportb(VGA_DAC_DATA, 0);
         }
     }
 
@@ -248,21 +256,21 @@ static void BankedFramebufferCopyRect(const SDL_DisplayModeData *mdata,
 
 static void WaitForVBlank(void)
 {
-    while (inportb(0x3DA) & 0x08) {
+    while (inportb(VGA_STATUS_PORT) & VGA_STATUS_VBLANK) {
         SDL_CPUPauseInstruction();
-    } // wait for non-vblank
-    while (!(inportb(0x3DA) & 0x08)) {
+    }
+    while (!(inportb(VGA_STATUS_PORT) & VGA_STATUS_VBLANK)) {
         SDL_CPUPauseInstruction();
-    } // wait for vblank
+    }
 }
 
 static void ProgramVGADAC(SDL_Palette *palette)
 {
-    outportb(0x3C8, 0);
+    outportb(VGA_DAC_WRITE_INDEX, 0);
     for (int i = 0; i < palette->ncolors && i < 256; i++) {
-        outportb(0x3C9, palette->colors[i].r >> 2);
-        outportb(0x3C9, palette->colors[i].g >> 2);
-        outportb(0x3C9, palette->colors[i].b >> 2);
+        outportb(VGA_DAC_DATA, palette->colors[i].r >> 2);
+        outportb(VGA_DAC_DATA, palette->colors[i].g >> 2);
+        outportb(VGA_DAC_DATA, palette->colors[i].b >> 2);
     }
 }
 

@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2026 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -31,6 +31,21 @@
 
 #include "../../core/dos/SDL_dos_scheduler.h"
 #include "SDL_dosevents_c.h"
+
+// PS/2 keyboard controller port
+#define KBD_DATA_PORT 0x60
+
+// Scancode byte structure
+#define SCANCODE_MASK    0x7F // bits 0-6: scancode index
+#define SCANCODE_RELEASE 0x80 // bit 7: key released (break code)
+
+// Multi-byte scancode prefixes
+#define SCANCODE_PREFIX_EXTENDED 0xE0 // extended key prefix
+#define SCANCODE_PREFIX_PAUSE    0xE1 // pause key sequence prefix
+
+// VGA Input Status Register 1 (for vblank detection)
+#define VGA_STATUS_PORT   0x3DA
+#define VGA_STATUS_VBLANK 0x08 // bit 3: vertical retrace active
 
 // Scancode table: https://www.plantation-productions.com/Webster/www.artofasm.com/DOS/pdf/apndxc.pdf
 static const SDL_Scancode DOSVESA_ScancodeMapping[] = { // index is the scancode from the IRQ1 handler bitwise-ANDed against 0x7F.
@@ -258,22 +273,21 @@ void DOSVESA_PumpEvents(SDL_VideoDevice *device)
             continue;
         }
 
-        // 0xE1 prefix: Pause key sends E1 1D 45 E1 9D C5. Emit PAUSE press+release and consume the rest.
-        if (event == 0xE1) {
+        // Pause key sends a multi-byte sequence: E1 1D 45 E1 9D C5. Emit PAUSE press+release and consume the rest.
+        if (event == SCANCODE_PREFIX_PAUSE) {
             pause_sequence_remaining = 5; // skip the next 5 bytes
             SDL_SendKeyboardKey(0, SDL_GLOBAL_KEYBOARD_ID, 0, SDL_SCANCODE_PAUSE, true);
             SDL_SendKeyboardKey(0, SDL_GLOBAL_KEYBOARD_ID, 0, SDL_SCANCODE_PAUSE, false);
             continue;
         }
 
-        // 0xE0 prefix: next byte is an extended scancode.
-        if (event == 0xE0) {
+        if (event == SCANCODE_PREFIX_EXTENDED) {
             is_extended = true;
             continue;
         }
 
-        const int scancode = (int)(event & 0x7F);
-        const bool pressed = ((event & 0x80) == 0);
+        const int scancode = (int)(event & SCANCODE_MASK);
+        const bool pressed = ((event & SCANCODE_RELEASE) == 0);
 
         if (is_extended) {
             is_extended = false;
@@ -322,7 +336,7 @@ void DOSVESA_PumpEvents(SDL_VideoDevice *device)
 
 static void KeyboardIRQHandler(void) // this is wrapped in a thing that handles IRET, etc.
 {
-    keyevents_ringbuffer[keyevents_head] = inportb(0x60);
+    keyevents_ringbuffer[keyevents_head] = inportb(KBD_DATA_PORT);
     keyevents_head = (keyevents_head + 1) & (SDL_arraysize(keyevents_ringbuffer) - 1);
     DOS_EndOfInterrupt(1);
 }

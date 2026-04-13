@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2026 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -39,6 +39,13 @@
 
 // this is DOS PC stuff, like interrupts and Intel i/o ports.
 #include <pc.h>
+
+// 8259 PIC (Programmable Interrupt Controller) ports and commands
+#define PIC1_COMMAND 0x20 // master PIC command port
+#define PIC1_DATA    0x21 // master PIC data (mask) port
+#define PIC2_COMMAND 0xA0 // slave PIC command port
+#define PIC2_DATA    0xA1 // slave PIC data (mask) port
+#define PIC_EOI      0x20 // end-of-interrupt command
 
 // Lock a range of code so it won't be paged out during interrupts.
 // Usage: DOS_LockCode(function_name, function_end_label)
@@ -107,9 +114,9 @@ SDL_FORCE_INLINE Uint32 DOS_PeekUint32(const Uint32 segoffset)
 SDL_FORCE_INLINE void DOS_EndOfInterrupt(int irq)
 {
     if (irq > 7) {
-        outportb(0xA0, 0x20); // Send EOI to slave PIC (PIC2) for IRQs 8-15
+        outportb(PIC2_COMMAND, PIC_EOI);
     }
-    outportb(0x20, 0x20); // Send EOI to master PIC (PIC1) — always needed (cascade)
+    outportb(PIC1_COMMAND, PIC_EOI);
 }
 
 // Allocate memory under the 640k line; various real mode services and DMA transfers need this.
