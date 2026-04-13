@@ -22,9 +22,9 @@
 
 #ifdef SDL_AUDIO_DRIVER_DOS_SOUNDBLASTER
 
-#include "SDL_dosaudio_sb.h"
 #include "../../core/dos/SDL_dos.h"
 #include "../../core/dos/SDL_dos_scheduler.h"
+#include "SDL_dosaudio_sb.h"
 
 // Set to 1 to force 8-bit mono (pre-SB16) code path even on SB16 hardware.
 // Useful for testing in DOSBox which always emulates an SB16 (DSP 4.x).
@@ -36,7 +36,7 @@ static int soundblaster_dma_channel = -1;
 static int soundblaster_highdma_channel = -1;
 static int soundblaster_version = -1;
 static int soundblaster_version_minor = -1;
-static bool soundblaster_is_sb16 = false;  // false when FORCE_SB_8BIT or DSP < 4
+static bool soundblaster_is_sb16 = false; // false when FORCE_SB_8BIT or DSP < 4
 static Uint8 soundblaster_silence_value = 0;
 
 static void ResetSoundBlasterDSP(void)
@@ -44,21 +44,22 @@ static void ResetSoundBlasterDSP(void)
     // reset the DSP.
     const int reset_port = soundblaster_base_port + 0x6;
     outportb(reset_port, 1);
-    SDL_DelayPrecise(3000);  // wait at least 3 microseconds for hardware to see it.
+    SDL_DelayPrecise(3000); // wait at least 3 microseconds for hardware to see it.
     outportb(reset_port, 0);
 }
 
 static bool ReadSoundBlasterReady(void)
 {
     const int ready_port = soundblaster_base_port + 0xE;
-    return ((inportb(ready_port) & (1<<7)) != 0);
+    return ((inportb(ready_port) & (1 << 7)) != 0);
 }
 
 static void WriteSoundBlasterDSP(const Uint8 val)
 {
     const int port = soundblaster_base_port + 0xC;
     int timeout = 100000;
-    while ((inportb(port) & (1<<7)) && --timeout > 0) { /* spin until ready or timeout */ }
+    while ((inportb(port) & (1 << 7)) && --timeout > 0) { /* spin until ready or timeout */
+    }
     outportb(port, val);
 }
 
@@ -66,8 +67,9 @@ static Uint8 ReadSoundBlasterDSP(void)
 {
     const int query_port = soundblaster_base_port + 0xA;
     int timeout = 100000;
-    while (!ReadSoundBlasterReady() && --timeout > 0) { /* spin until ready or timeout */ }
-    return (Uint8) inportb(query_port);
+    while (!ReadSoundBlasterReady() && --timeout > 0) { /* spin until ready or timeout */
+    }
+    return (Uint8)inportb(query_port);
 }
 
 static volatile bool soundblaster_irq_pending = false;
@@ -75,16 +77,16 @@ static volatile bool soundblaster_irq_pending = false;
 // ISR-cached copies of device state (avoids chasing heap pointers in IRQ context).
 static volatile int isr_irq_ack_port = 0;
 
-static void SoundBlasterIRQHandler(void)  // this is wrapped in a thing that handles IRET, etc.
+static void SoundBlasterIRQHandler(void) // this is wrapped in a thing that handles IRET, etc.
 {
     // Set flag and acknowledge hardware.  The actual mixing happens in
     // SDL's audio thread via DOSSOUNDBLASTER_WaitDevice / DOS_Yield.
     soundblaster_irq_pending = true;
 
-    inportb(isr_irq_ack_port);  // acknowledge the interrupt
+    inportb(isr_irq_ack_port); // acknowledge the interrupt
     DOS_EndOfInterrupt(soundblaster_irq);
 }
-static void SoundBlasterIRQHandler_End(void) { }  // end-of-ISR label for memory locking
+static void SoundBlasterIRQHandler_End(void) {} // end-of-ISR label for memory locking
 
 // Block until the SB16 ISR signals that the DMA buffer needs refilling.
 // Called from SDL's audio thread (PlaybackAudioThread) between iterations.
@@ -104,7 +106,6 @@ static bool DOSSOUNDBLASTER_WaitDevice(SDL_AudioDevice *device)
 
     return true;
 }
-
 
 static bool DOSSOUNDBLASTER_OpenDevice(SDL_AudioDevice *device)
 {
@@ -132,7 +133,7 @@ static bool DOSSOUNDBLASTER_OpenDevice(SDL_AudioDevice *device)
     //   SB 2.0 (DSP 2.x): max 44100 Hz mono (high-speed), ~23 kHz normal
     //   SB Pro (DSP 3.x): max 22050 Hz stereo, max 44100 Hz mono
     if (!is_sb16 && device->spec.freq > 22050) {
-        device->spec.freq = 22050;  // clamp to safe max for pre-SB16
+        device->spec.freq = 22050; // clamp to safe max for pre-SB16
     }
     device->sample_frames = SDL_GetDefaultSampleFramesFromFreq(device->spec.freq);
 
@@ -144,11 +145,11 @@ static bool DOSSOUNDBLASTER_OpenDevice(SDL_AudioDevice *device)
             soundblaster_version, soundblaster_version_minor, is_sb16 ? "SB16" : "pre-SB16");
 
     if (device->buffer_size > (32 * 1024)) {
-        return SDL_SetError("Buffer size is too large (choose smaller audio format and/or fewer sample frames)");  // DMA buffer has to fit in 64K segment, so buffer_size has to be half that, as we double it.
+        return SDL_SetError("Buffer size is too large (choose smaller audio format and/or fewer sample frames)"); // DMA buffer has to fit in 64K segment, so buffer_size has to be half that, as we double it.
     }
 
     // Initialize all variables that we clean on shutdown
-    struct SDL_PrivateAudioData *hidden = (struct SDL_PrivateAudioData *) SDL_calloc(1, sizeof(*device->hidden));
+    struct SDL_PrivateAudioData *hidden = (struct SDL_PrivateAudioData *)SDL_calloc(1, sizeof(*device->hidden));
     if (!hidden) {
         return false;
     }
@@ -163,15 +164,15 @@ static bool DOSSOUNDBLASTER_OpenDevice(SDL_AudioDevice *device)
     if (hidden->dma_channel < 0) {
         SDL_free(hidden);
         return SDL_SetError("No %s DMA channel configured in BLASTER environment variable",
-                           is_sb16 ? "high (16-bit)" : "low (8-bit)");
+                            is_sb16 ? "high (16-bit)" : "low (8-bit)");
     }
     hidden->dma_buflen = device->buffer_size * 2;
-    hidden->dma_buffer = (Uint8 *) DOS_AllocateDMAMemory(hidden->dma_buflen, &hidden->dma_seginfo);
+    hidden->dma_buffer = (Uint8 *)DOS_AllocateDMAMemory(hidden->dma_buflen, &hidden->dma_seginfo);
     if (!hidden->dma_buffer) {
         return SDL_SetError("Couldn't allocate Sound Blaster DMA buffer!");
     }
 
-    SDL_Log("SOUNDBLASTER: Allocated %d bytes of conventional memory at segment %d (ptr=%p)", (int) hidden->dma_buflen, (int) hidden->dma_seginfo.rm_segment, hidden->dma_buffer);
+    SDL_Log("SOUNDBLASTER: Allocated %d bytes of conventional memory at segment %d (ptr=%p)", (int)hidden->dma_buflen, (int)hidden->dma_seginfo.rm_segment, hidden->dma_buffer);
 
     // silence the DMA buffer to start
     SDL_memset(hidden->dma_buffer, soundblaster_silence_value, hidden->dma_buflen);
@@ -183,31 +184,31 @@ static bool DOSSOUNDBLASTER_OpenDevice(SDL_AudioDevice *device)
     if (is_sb16) {
         // High DMA (16-bit, channels 5-7): ports in 0xC0-0xDF range, counts in words.
         const int dma_words = (hidden->dma_buflen / 2) - 1;
-        outportb(0xD4, 0x04 | hidden->dma_channel);  // mask the DMA channel
-        outportb(0xD6, 0x58 | (hidden->dma_channel - 4));  // mode: single, read, auto-init
-        static const int high_page_ports[] = { 0, 0, 0, 0, 0, 0x8B, 0x89, 0x8A };  // DMA page register ports for channels 5-7
-        outportb(high_page_ports[hidden->dma_channel], physical_page);  // page to transfer
-        outportb(0xD8, 0x00);  // clear the flip-flop
-        outportb(0xC0 + (hidden->dma_channel - 4) * 4, (Uint8) ((physical >> 1) & 0xFF));   // offset low (word address)
-        outportb(0xC0 + (hidden->dma_channel - 4) * 4, (Uint8) ((physical >> 9) & 0xFF));   // offset high
-        outportb(0xD8, 0x00);  // clear the flip-flop
-        outportb(0xC0 + (hidden->dma_channel - 4) * 4 + 2, (Uint8) (dma_words & 0xFF));     // count low
-        outportb(0xC0 + (hidden->dma_channel - 4) * 4 + 2, (Uint8) ((dma_words >> 8) & 0xFF));  // count high
-        outportb(0xD4, hidden->dma_channel & ~4);  // unmask the DMA channel
+        outportb(0xD4, 0x04 | hidden->dma_channel);                                           // mask the DMA channel
+        outportb(0xD6, 0x58 | (hidden->dma_channel - 4));                                     // mode: single, read, auto-init
+        static const int high_page_ports[] = { 0, 0, 0, 0, 0, 0x8B, 0x89, 0x8A };             // DMA page register ports for channels 5-7
+        outportb(high_page_ports[hidden->dma_channel], physical_page);                        // page to transfer
+        outportb(0xD8, 0x00);                                                                 // clear the flip-flop
+        outportb(0xC0 + (hidden->dma_channel - 4) * 4, (Uint8)((physical >> 1) & 0xFF));      // offset low (word address)
+        outportb(0xC0 + (hidden->dma_channel - 4) * 4, (Uint8)((physical >> 9) & 0xFF));      // offset high
+        outportb(0xD8, 0x00);                                                                 // clear the flip-flop
+        outportb(0xC0 + (hidden->dma_channel - 4) * 4 + 2, (Uint8)(dma_words & 0xFF));        // count low
+        outportb(0xC0 + (hidden->dma_channel - 4) * 4 + 2, (Uint8)((dma_words >> 8) & 0xFF)); // count high
+        outportb(0xD4, hidden->dma_channel & ~4);                                             // unmask the DMA channel
     } else {
         // Low DMA (8-bit, channels 0-3): ports in 0x00-0x0F range, counts in bytes.
-        static const int page_ports[] = { 0x87, 0x83, 0x81, 0x82 };  // DMA page register ports for channels 0-3 (yes, they're out of order — that's how the IBM PC DMA controller works)
+        static const int page_ports[] = { 0x87, 0x83, 0x81, 0x82 }; // DMA page register ports for channels 0-3 (yes, they're out of order — that's how the IBM PC DMA controller works)
         const int dma_bytes = hidden->dma_buflen - 1;
-        outportb(0x0A, 0x04 | hidden->dma_channel);  // mask the DMA channel
-        outportb(0x0B, 0x58 | hidden->dma_channel);  // mode: single, read, auto-init
-        outportb(page_ports[hidden->dma_channel], physical_page);  // page to transfer
-        outportb(0x0C, 0x00);  // clear the flip-flop
-        outportb(hidden->dma_channel * 2, (Uint8) (physical & 0xFF));         // offset low (byte address)
-        outportb(hidden->dma_channel * 2, (Uint8) ((physical >> 8) & 0xFF));  // offset high
-        outportb(0x0C, 0x00);  // clear the flip-flop
-        outportb(hidden->dma_channel * 2 + 1, (Uint8) (dma_bytes & 0xFF));          // count low
-        outportb(hidden->dma_channel * 2 + 1, (Uint8) ((dma_bytes >> 8) & 0xFF));   // count high
-        outportb(0x0A, hidden->dma_channel);  // unmask the DMA channel (just the channel number, no bit 2)
+        outportb(0x0A, 0x04 | hidden->dma_channel);                              // mask the DMA channel
+        outportb(0x0B, 0x58 | hidden->dma_channel);                              // mode: single, read, auto-init
+        outportb(page_ports[hidden->dma_channel], physical_page);                // page to transfer
+        outportb(0x0C, 0x00);                                                    // clear the flip-flop
+        outportb(hidden->dma_channel * 2, (Uint8)(physical & 0xFF));             // offset low (byte address)
+        outportb(hidden->dma_channel * 2, (Uint8)((physical >> 8) & 0xFF));      // offset high
+        outportb(0x0C, 0x00);                                                    // clear the flip-flop
+        outportb(hidden->dma_channel * 2 + 1, (Uint8)(dma_bytes & 0xFF));        // count low
+        outportb(hidden->dma_channel * 2 + 1, (Uint8)((dma_bytes >> 8) & 0xFF)); // count high
+        outportb(0x0A, hidden->dma_channel);                                     // unmask the DMA channel (just the channel number, no bit 2)
     }
 
     soundblaster_irq_pending = false;
@@ -224,7 +225,7 @@ static bool DOSSOUNDBLASTER_OpenDevice(SDL_AudioDevice *device)
 
     DOS_HookInterrupt(soundblaster_irq, SoundBlasterIRQHandler, &hidden->interrupt_hook);
 
-    WriteSoundBlasterDSP(0xD1);  // turn on the speaker
+    WriteSoundBlasterDSP(0xD1); // turn on the speaker
     // The speaker-on command takes up to 112 ms to complete on real hardware.
     // Poll the DSP write status port (bit 7 clears when the DSP is ready);
     // in practice — and always in DOSBox — it completes almost instantly.
@@ -232,23 +233,23 @@ static bool DOSSOUNDBLASTER_OpenDevice(SDL_AudioDevice *device)
         const int status_port = soundblaster_base_port + 0xC;
         const Uint64 deadline = SDL_GetTicksNS() + SDL_MS_TO_NS(112);
         while ((inportb(status_port) & 0x80) && (SDL_GetTicksNS() < deadline)) {
-            SDL_DelayPrecise(SDL_US_TO_NS(100));  // brief yield between polls
+            SDL_DelayPrecise(SDL_US_TO_NS(100)); // brief yield between polls
         }
     }
 
     if (is_sb16) {
         // SB16 (DSP >= 4): set output sample rate directly
-        WriteSoundBlasterDSP(0x41);  // set output sampling rate
-        WriteSoundBlasterDSP((Uint8) (device->spec.freq >> 8));
-        WriteSoundBlasterDSP((Uint8) (device->spec.freq & 0xFF));
+        WriteSoundBlasterDSP(0x41); // set output sampling rate
+        WriteSoundBlasterDSP((Uint8)(device->spec.freq >> 8));
+        WriteSoundBlasterDSP((Uint8)(device->spec.freq & 0xFF));
 
         // start 16-bit auto-initialize DMA mode
         // half the total buffer per transfer, then convert to samples (divide by 2 because they are 16-bits each).
-        const int block_size = ((hidden->dma_buflen / 2) / sizeof (Sint16)) - 1;  // one less than samples to be transferred.
-        WriteSoundBlasterDSP(0xB6);  // 16-bit output, auto-init, FIFO on
-        WriteSoundBlasterDSP(0x30);  // 16-bit stereo signed PCM
-        WriteSoundBlasterDSP((Uint8) (block_size & 0xFF));
-        WriteSoundBlasterDSP((Uint8) (block_size >> 8));
+        const int block_size = ((hidden->dma_buflen / 2) / sizeof(Sint16)) - 1; // one less than samples to be transferred.
+        WriteSoundBlasterDSP(0xB6);                                             // 16-bit output, auto-init, FIFO on
+        WriteSoundBlasterDSP(0x30);                                             // 16-bit stereo signed PCM
+        WriteSoundBlasterDSP((Uint8)(block_size & 0xFF));
+        WriteSoundBlasterDSP((Uint8)(block_size >> 8));
     } else {
         // Pre-SB16 (DSP < 4): set sample rate via Time Constant
         // Time Constant = 256 - (1000000 / (channels * freq))
@@ -256,31 +257,31 @@ static bool DOSSOUNDBLASTER_OpenDevice(SDL_AudioDevice *device)
         // hardware rate is channels * freq.
         const int effective_rate = device->spec.channels * device->spec.freq;
         const Uint8 time_constant = (Uint8)(256 - (1000000 / effective_rate));
-        WriteSoundBlasterDSP(0x40);  // set time constant
+        WriteSoundBlasterDSP(0x40); // set time constant
         WriteSoundBlasterDSP(time_constant);
 
         // SB Pro (DSP 3.x): enable or disable stereo via mixer register 0x0E
         if (soundblaster_version >= 3) {
             const int mixer_addr = soundblaster_base_port + 0x04;
             const int mixer_data = soundblaster_base_port + 0x05;
-            outportb(mixer_addr, 0x0E);  // select output/stereo register
+            outportb(mixer_addr, 0x0E); // select output/stereo register
             if (device->spec.channels == 2) {
-                outportb(mixer_data, inportb(mixer_data) | 0x02);   // set bit 1 = stereo
+                outportb(mixer_data, inportb(mixer_data) | 0x02); // set bit 1 = stereo
             } else {
-                outportb(mixer_data, inportb(mixer_data) & ~0x02);  // clear bit 1 = mono
+                outportb(mixer_data, inportb(mixer_data) & ~0x02); // clear bit 1 = mono
             }
         }
 
         // start 8-bit auto-initialize DMA mode
         // block_size is in bytes for 8-bit, and it's the half-buffer size minus 1
         const int block_size = (hidden->dma_buflen / 2) - 1;
-        WriteSoundBlasterDSP(0x48);  // set DSP block transfer size
-        WriteSoundBlasterDSP((Uint8) (block_size & 0xFF));
-        WriteSoundBlasterDSP((Uint8) (block_size >> 8));
+        WriteSoundBlasterDSP(0x48); // set DSP block transfer size
+        WriteSoundBlasterDSP((Uint8)(block_size & 0xFF));
+        WriteSoundBlasterDSP((Uint8)(block_size >> 8));
         // NOTE: DSP 1.x does not support auto-init (0x1C). Those cards are extremely
         // rare and would need single-cycle transfers re-triggered from the ISR.
         // For now we use 0x1C anyway and hope for the best on DSP 1.x hardware.
-        WriteSoundBlasterDSP(0x1C);  // 8-bit auto-init DMA playback
+        WriteSoundBlasterDSP(0x1C); // 8-bit auto-init DMA playback
     }
 
     SDL_Log("SoundBlaster opened!");
@@ -296,16 +297,16 @@ static Uint8 *DOSSOUNDBLASTER_GetDeviceBuf(SDL_AudioDevice *device, int *buffer_
     int count;
     if (hidden->is_16bit) {
         // High DMA (16-bit, channels 5-7): ports in 0xC0+ range, counts in 16-bit words
-        outportb(0xD8, 0x00);  // clear byte flip-flop for high DMA
-        count = (int) inportb(0xC0 + (hidden->dma_channel - 4) * 4 + 2);
-        count += (int) inportb(0xC0 + (hidden->dma_channel - 4) * 4 + 2) << 8;
+        outportb(0xD8, 0x00); // clear byte flip-flop for high DMA
+        count = (int)inportb(0xC0 + (hidden->dma_channel - 4) * 4 + 2);
+        count += (int)inportb(0xC0 + (hidden->dma_channel - 4) * 4 + 2) << 8;
         // count is in words; halfdma is in bytes, so compare against halfdma/2
         return hidden->dma_buffer + (count < (halfdma / 2) ? 0 : halfdma);
     } else {
         // Low DMA (8-bit, channels 0-3): ports in 0x00+ range, counts in bytes
-        outportb(0x0C, 0x00);  // clear byte flip-flop for low DMA
-        count = (int) inportb(hidden->dma_channel * 2 + 1);
-        count += (int) inportb(hidden->dma_channel * 2 + 1) << 8;
+        outportb(0x0C, 0x00); // clear byte flip-flop for low DMA
+        count = (int)inportb(hidden->dma_channel * 2 + 1);
+        count += (int)inportb(hidden->dma_channel * 2 + 1) << 8;
         // count is in bytes; halfdma is in bytes, so compare directly
         return hidden->dma_buffer + (count < halfdma ? 0 : halfdma);
     }
@@ -317,19 +318,19 @@ static void DOSSOUNDBLASTER_CloseDevice(SDL_AudioDevice *device)
     if (hidden) {
         // Disable PCM.
         if (hidden->is_16bit) {
-            WriteSoundBlasterDSP(0xDA);  // exit 16-bit auto-init DMA
-            WriteSoundBlasterDSP(0xD3);  // turn off the speaker
+            WriteSoundBlasterDSP(0xDA); // exit 16-bit auto-init DMA
+            WriteSoundBlasterDSP(0xD3); // turn off the speaker
         } else {
-            WriteSoundBlasterDSP(0xD0);  // halt 8-bit DMA
-            WriteSoundBlasterDSP(0xDA);  // exit auto-init DMA
-            WriteSoundBlasterDSP(0xD3);  // turn off the speaker
+            WriteSoundBlasterDSP(0xD0); // halt 8-bit DMA
+            WriteSoundBlasterDSP(0xDA); // exit auto-init DMA
+            WriteSoundBlasterDSP(0xD3); // turn off the speaker
 
             // SB Pro: reset stereo bit in mixer register 0x0E
             if (soundblaster_version >= 3) {
                 const int mixer_addr = soundblaster_base_port + 0x04;
                 const int mixer_data = soundblaster_base_port + 0x05;
                 outportb(mixer_addr, 0x0E);
-                outportb(mixer_data, inportb(mixer_data) & ~0x02);  // clear stereo bit
+                outportb(mixer_data, inportb(mixer_data) & ~0x02); // clear stereo bit
             }
         }
 
@@ -338,9 +339,9 @@ static void DOSSOUNDBLASTER_CloseDevice(SDL_AudioDevice *device)
         // disable DMA — mask the appropriate DMA channel.
         if (hidden->dma_buffer) {
             if (hidden->is_16bit) {
-                outportb(0xD4, 0x04 | hidden->dma_channel);  // mask high DMA channel (channels 5-7)
+                outportb(0xD4, 0x04 | hidden->dma_channel); // mask high DMA channel (channels 5-7)
             } else {
-                outportb(0x0A, 0x04 | hidden->dma_channel);  // mask low DMA channel (channels 0-3)
+                outportb(0x0A, 0x04 | hidden->dma_channel); // mask low DMA channel (channels 0-3)
             }
             DOS_FreeConventionalMemory(&hidden->dma_seginfo);
         }
@@ -367,9 +368,9 @@ static bool CheckForSoundBlaster(void)
     }
 
     if (!ready) {
-        return SDL_SetError("No SoundBlaster detected on port 0x%X", soundblaster_base_port);  // either no SoundBlaster or it's on a different base port.
+        return SDL_SetError("No SoundBlaster detected on port 0x%X", soundblaster_base_port); // either no SoundBlaster or it's on a different base port.
     } else if (ReadSoundBlasterDSP() != 0xAA) {
-        return SDL_SetError("Not a SoundBlaster at port 0x%X", soundblaster_base_port);  // either it's not a SoundBlaster or there's a problem.
+        return SDL_SetError("Not a SoundBlaster at port 0x%X", soundblaster_base_port); // either it's not a SoundBlaster or there's a problem.
     }
     return true;
 }
@@ -378,12 +379,12 @@ static bool IsSoundBlasterPresent(void)
 {
     const char *env = SDL_getenv("BLASTER");
     if (!env) {
-        return SDL_SetError("No BLASTER environment variable to find Sound Blaster");   // definitely doesn't have a Sound Blaster (or they screwed up).
+        return SDL_SetError("No BLASTER environment variable to find Sound Blaster"); // definitely doesn't have a Sound Blaster (or they screwed up).
     }
 
     char *copy = SDL_strdup(env);
     if (!copy) {
-        return false;  // oh well.
+        return false; // oh well.
     }
 
     char *str = copy;
@@ -391,39 +392,40 @@ static bool IsSoundBlasterPresent(void)
 
     char *token;
     while ((token = SDL_strtok_r(str, " ", &saveptr)) != NULL) {
-        str = NULL;  // must be NULL for future calls to tokenize the same string.
+        str = NULL; // must be NULL for future calls to tokenize the same string.
         char *endp = NULL;
         const int base = (SDL_toupper(*token) == 'A') ? 16 : 10;
-        const int num = (int) SDL_strtol(token+1, &endp, base);
-        if ((token[1] == 0) || (*endp != 0)) {  // bogus num
+        const int num = (int)SDL_strtol(token + 1, &endp, base);
+        if ((token[1] == 0) || (*endp != 0)) { // bogus num
             continue;
         } else if (num < 0) {
             continue;
         }
 
         switch (SDL_toupper(*token)) {
-            case 'A':  // Base i/o port (in hex)
-                soundblaster_base_port = num;
-                break;
+        case 'A': // Base i/o port (in hex)
+            soundblaster_base_port = num;
+            break;
 
-            case 'I':  // IRQ
-                soundblaster_irq = num;
-                break;
+        case 'I': // IRQ
+            soundblaster_irq = num;
+            break;
 
-            case 'D':  // DMA channel
-                soundblaster_dma_channel = num;
-                break;
+        case 'D': // DMA channel
+            soundblaster_dma_channel = num;
+            break;
 
-            case 'H':  // High DMA channel
-                soundblaster_highdma_channel = num;
-                break;
+        case 'H': // High DMA channel
+            soundblaster_highdma_channel = num;
+            break;
 
-            // don't care about these.
-            //case 'M':  // mixer chip base port
-            //case 'P':  // MPU-401 base port
-            //case 'T':  // type of device
-            //case 'E':  // EMU8000 base port: an AWE32 thing
-            default: break;
+        // don't care about these.
+        // case 'M':  // mixer chip base port
+        // case 'P':  // MPU-401 base port
+        // case 'T':  // type of device
+        // case 'E':  // EMU8000 base port: an AWE32 thing
+        default:
+            break;
         }
     }
     SDL_free(copy);
@@ -434,9 +436,9 @@ static bool IsSoundBlasterPresent(void)
         return false;
     }
 
-    WriteSoundBlasterDSP(0xE1);  // query DSP version
-    soundblaster_version = (int) ReadSoundBlasterDSP();
-    soundblaster_version_minor = (int) ReadSoundBlasterDSP();
+    WriteSoundBlasterDSP(0xE1); // query DSP version
+    soundblaster_version = (int)ReadSoundBlasterDSP();
+    soundblaster_version_minor = (int)ReadSoundBlasterDSP();
 
     SDL_Log("SB: BLASTER env='%s'", env);
     SDL_Log("SB: port=0x%X", soundblaster_base_port);
@@ -446,7 +448,7 @@ static bool IsSoundBlasterPresent(void)
     SDL_Log("SB: version=%d.%d", soundblaster_version, soundblaster_version_minor);
 
     soundblaster_is_sb16 = !FORCE_SB_8BIT && (soundblaster_version >= 4);
-    soundblaster_silence_value = soundblaster_is_sb16 ? 0x00 : 0x80;  // S16LE silence is 0x00, U8 silence is 0x80
+    soundblaster_silence_value = soundblaster_is_sb16 ? 0x00 : 0x80; // S16LE silence is 0x00, U8 silence is 0x80
 
     return true;
 }

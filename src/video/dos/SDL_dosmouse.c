@@ -24,12 +24,12 @@
 
 // https://stanislavs.org/helppc/int_33.html
 
-#include "SDL_dosvideo.h"
 #include "SDL_dosmouse.h"
+#include "SDL_dosvideo.h"
 
-#include "../SDL_sysvideo.h"
 #include "../../events/SDL_mouse_c.h"
 #include "../../events/default_cursor.h"
+#include "../SDL_sysvideo.h"
 
 // Create a cursor from a surface
 static SDL_Cursor *DOSVESA_CreateCursor(SDL_Surface *surface, int hot_x, int hot_y)
@@ -77,7 +77,7 @@ static SDL_Cursor *DOSVESA_CreateDefaultCursor(void)
 // Show the specified cursor, or hide if cursor is NULL
 static bool DOSVESA_ShowCursor(SDL_Cursor *cursor)
 {
-    return true;  // we handle this elsewhere.
+    return true; // we handle this elsewhere.
 }
 
 // Free a window manager cursor
@@ -107,8 +107,8 @@ static bool DOSVESA_WarpMouseGlobal(float x, float y)
     // warp mouse in the driver, so we get correct screen coordinates from it.
     __dpmi_regs regs;
     regs.x.ax = 0x4;
-    regs.x.cx = (Uint16) x;
-    regs.x.dx = (Uint16) y;
+    regs.x.cx = (Uint16)x;
+    regs.x.dx = (Uint16)y;
     __dpmi_int(0x33, &regs);
 
     // Update internal mouse position.
@@ -125,7 +125,7 @@ static bool DOSVESA_WarpMouse(SDL_Window *window, float x, float y)
 // This is called when a mouse motion event occurs
 static bool DOSVESA_MoveCursor(SDL_Cursor *cursor)
 {
-    return true;  // we handle this elsewhere.
+    return true; // we handle this elsewhere.
 }
 
 void DOSVESA_InitMouse(SDL_VideoDevice *_this)
@@ -137,14 +137,14 @@ void DOSVESA_InitMouse(SDL_VideoDevice *_this)
     regs.x.ax = 0;
     __dpmi_int(0x33, &regs);
     if (regs.x.ax == 0) {
-        return;  // no mouse found, don't hook up cursor support, etc.
+        return; // no mouse found, don't hook up cursor support, etc.
     }
 
-    mouse->internal = SDL_calloc(1, 1);  // just something non-NULL (and safely freeable) to say "there's a mouse available."
+    mouse->internal = SDL_calloc(1, 1); // just something non-NULL (and safely freeable) to say "there's a mouse available."
 
     // Query mouse sensitivity (mickeys per pixel) via INT 33h function 0x1B
     SDL_VideoData *data = _this->internal;
-    regs.x.ax = 0x1B;  // Get Mouse Sensitivity
+    regs.x.ax = 0x1B; // Get Mouse Sensitivity
     __dpmi_int(0x33, &regs);
     data->mickeys_per_hpixel = (regs.x.bx > 0) ? (float)regs.x.bx : 8.0f;
     data->mickeys_per_vpixel = (regs.x.cx > 0) ? (float)regs.x.cx : 16.0f;

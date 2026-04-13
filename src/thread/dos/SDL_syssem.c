@@ -79,13 +79,13 @@ bool SDL_WaitSemaphoreTimeoutNS(SDL_Semaphore *sem, Sint64 timeoutNS)
         if (sem->count > 0) {
             sem->count--;
             DOS_EnableInterrupts();
-            return true;  /* Acquired */
+            return true; /* Acquired */
         }
         DOS_EnableInterrupts();
 
         /* Check timeout */
         if (timeoutNS > 0 && SDL_GetPerformanceCounter() >= deadline) {
-            return false;  /* Timed out */
+            return false; /* Timed out */
         }
 
         /* Yield to other threads instead of busy-spinning */

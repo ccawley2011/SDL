@@ -26,7 +26,7 @@
 
 void *DOS_AllocateConventionalMemory(const int len, _go32_dpmi_seginfo *seginfo)
 {
-    seginfo->size = (len + 15) / 16;  // this is in "paragraphs"
+    seginfo->size = (len + 15) / 16; // this is in "paragraphs"
     if (_go32_dpmi_allocate_dos_memory(seginfo) != 0) {
         SDL_OutOfMemory();
         return NULL;
@@ -45,14 +45,14 @@ void *DOS_AllocateDMAMemory(const int len, _go32_dpmi_seginfo *seginfo)
     // a boundary. This is the standard technique used by Allegro, MIDAS, and
     // every other DOS audio library; allocate-check-retry would add complexity
     // for zero benefit.
-    uint8_t *ptr = (uint8_t *) DOS_AllocateConventionalMemory(len * 2, seginfo);
+    uint8_t *ptr = (uint8_t *)DOS_AllocateConventionalMemory(len * 2, seginfo);
     if (!ptr) {
         return NULL;
     }
 
     // if we're past the end of a page, use the second half of the block.
     const uint32_t physical = (seginfo->rm_segment * 16);
-    if ((physical >> 16) != ((physical+len) >> 16)) {
+    if ((physical >> 16) != ((physical + len) >> 16)) {
         ptr += len;
     }
     return ptr;
@@ -65,23 +65,24 @@ void DOS_FreeConventionalMemory(_go32_dpmi_seginfo *seginfo)
 
 char *DOS_GetFarPtrCString(const Uint32 segoffset)
 {
-    if (!segoffset) {  // let's just treat this as a NULL pointer.
+    if (!segoffset) { // let's just treat this as a NULL pointer.
         return NULL;
     }
 
-    const unsigned long ofs = (unsigned long) (((segoffset & 0xFFFF0000) >> 12) + (segoffset & 0xFFFF));
+    const unsigned long ofs = (unsigned long)(((segoffset & 0xFFFF0000) >> 12) + (segoffset & 0xFFFF));
     size_t len;
 
-    for (len = 0; _farpeekb(_dos_ds, ofs+len) != '\0'; len++) {}
+    for (len = 0; _farpeekb(_dos_ds, ofs + len) != '\0'; len++) {
+    }
 
-    len++;  // null terminator.
+    len++; // null terminator.
     char *retval = SDL_malloc(len);
     if (!retval) {
         return NULL;
     }
 
     for (size_t i = 0; i < len; i++) {
-        retval[i] = (char) _farpeekb(_dos_ds, ofs+i);
+        retval[i] = (char)_farpeekb(_dos_ds, ofs + i);
     }
     return retval;
 }
@@ -95,16 +96,16 @@ void DOS_HookInterrupt(int irq, DOS_InterruptHookFn fn, DOS_InterruptHook *hook)
     hook->irq = irq;
     hook->interrupt_vector = DOS_IRQToVector(irq);
     hook->irq_handler_seginfo.pm_selector = _go32_my_cs();
-    hook->irq_handler_seginfo.pm_offset = (uint32_t) fn;
+    hook->irq_handler_seginfo.pm_offset = (uint32_t)fn;
     _go32_dpmi_get_protected_mode_interrupt_vector(hook->interrupt_vector, &hook->original_irq_handler_seginfo);
     _go32_dpmi_chain_protected_mode_interrupt_vector(hook->interrupt_vector, &hook->irq_handler_seginfo);
 
     // enable interrupt on the correct PIC
     if (irq > 7) {
-        outportb(0xA1, inportb(0xA1) & ~(1 << (irq - 8)));  // unmask on slave PIC
-        outportb(0x21, inportb(0x21) & ~(1 << 2));           // ensure cascade (IRQ2) is unmasked
+        outportb(0xA1, inportb(0xA1) & ~(1 << (irq - 8))); // unmask on slave PIC
+        outportb(0x21, inportb(0x21) & ~(1 << 2));         // ensure cascade (IRQ2) is unmasked
     } else {
-        outportb(0x21, inportb(0x21) & ~(1 << irq));         // unmask on master PIC
+        outportb(0x21, inportb(0x21) & ~(1 << irq)); // unmask on master PIC
     }
 }
 
@@ -119,9 +120,9 @@ void DOS_UnhookInterrupt(DOS_InterruptHook *hook, bool disable_interrupt)
 
     if (disable_interrupt) {
         if (hook->irq > 7) {
-            outportb(0xA1, inportb(0xA1) | (1 << (hook->irq - 8)));  // mask on slave PIC
+            outportb(0xA1, inportb(0xA1) | (1 << (hook->irq - 8))); // mask on slave PIC
         } else {
-            outportb(0x21, inportb(0x21) | (1 << hook->irq));        // mask on master PIC
+            outportb(0x21, inportb(0x21) | (1 << hook->irq)); // mask on master PIC
         }
     }
 
@@ -138,6 +139,4 @@ void DOS_UnhookInterrupt(DOS_InterruptHook *hook, bool disable_interrupt)
     SDL_zerop(hook);
 }
 
-
 #endif // defined(SDL_PLATFORM_DOS)
-

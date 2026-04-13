@@ -63,12 +63,12 @@ extern "C" {
 //  C pointer usable from protected mode.
 SDL_FORCE_INLINE void *DOS_PhysicalToLinear(const Uint32 physical)
 {
-	return (void *) (physical + __djgpp_conventional_base);
+    return (void *)(physical + __djgpp_conventional_base);
 }
 
 SDL_FORCE_INLINE Uint32 DOS_LinearToPhysical(void *linear)
 {
-	return ((Uint32) linear) - __djgpp_conventional_base;
+    return ((Uint32)linear) - __djgpp_conventional_base;
 }
 
 SDL_FORCE_INLINE int DOS_IRQToVector(int irq)
@@ -89,27 +89,27 @@ SDL_FORCE_INLINE void DOS_EnableInterrupts(void)
 // Grab a single byte from a segment:offset.
 SDL_FORCE_INLINE Uint8 DOS_PeekUint8(const Uint32 segoffset)
 {
-    return (Uint8) _farpeekb(_dos_ds, ((segoffset & 0xFFFF0000) >> 12) + (segoffset & 0xFFFF));
+    return (Uint8)_farpeekb(_dos_ds, ((segoffset & 0xFFFF0000) >> 12) + (segoffset & 0xFFFF));
 }
 
 // Grab a single 16-bit word from a segment:offset.
 SDL_FORCE_INLINE Uint16 DOS_PeekUint16(const Uint32 segoffset)
 {
-    return (Uint16) _farpeekw(_dos_ds, ((segoffset & 0xFFFF0000) >> 12) + (segoffset & 0xFFFF));
+    return (Uint16)_farpeekw(_dos_ds, ((segoffset & 0xFFFF0000) >> 12) + (segoffset & 0xFFFF));
 }
 
 // Grab a single 32-bit dword from a segment:offset.
 SDL_FORCE_INLINE Uint32 DOS_PeekUint32(const Uint32 segoffset)
 {
-    return (Uint32) _farpeekl(_dos_ds, ((segoffset & 0xFFFF0000) >> 12) + (segoffset & 0xFFFF));
+    return (Uint32)_farpeekl(_dos_ds, ((segoffset & 0xFFFF0000) >> 12) + (segoffset & 0xFFFF));
 }
 
 SDL_FORCE_INLINE void DOS_EndOfInterrupt(int irq)
 {
     if (irq > 7) {
-        outportb(0xA0, 0x20);  // Send EOI to slave PIC (PIC2) for IRQs 8-15
+        outportb(0xA0, 0x20); // Send EOI to slave PIC (PIC2) for IRQs 8-15
     }
-    outportb(0x20, 0x20);  // Send EOI to master PIC (PIC1) — always needed (cascade)
+    outportb(0x20, 0x20); // Send EOI to master PIC (PIC1) — always needed (cascade)
 }
 
 // Allocate memory under the 640k line; various real mode services and DMA transfers need this.
@@ -131,13 +131,13 @@ typedef struct DOS_InterruptHook
 {
     DOS_InterruptHookFn fn;
     int irq;
-    int interrupt_vector;  // this is the _vector_ number, not the IRQ number!
+    int interrupt_vector; // this is the _vector_ number, not the IRQ number!
     _go32_dpmi_seginfo irq_handler_seginfo;
     _go32_dpmi_seginfo original_irq_handler_seginfo;
 
 } DOS_InterruptHook;
 
-void DOS_HookInterrupt(int irq, DOS_InterruptHookFn fn, DOS_InterruptHook *hook);  // `irq` is the IRQ number, not the interrupt vector number!
+void DOS_HookInterrupt(int irq, DOS_InterruptHookFn fn, DOS_InterruptHook *hook); // `irq` is the IRQ number, not the interrupt vector number!
 void DOS_UnhookInterrupt(DOS_InterruptHook *hook, bool disable_interrupt);
 
 // Ends C function definitions when using C++

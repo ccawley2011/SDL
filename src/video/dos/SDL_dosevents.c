@@ -24,8 +24,8 @@
 #ifdef SDL_VIDEO_DRIVER_DOSVESA
 
 #include "../../events/SDL_events_c.h"
-#include "../../events/SDL_mouse_c.h"
 #include "../../events/SDL_keyboard_c.h"
+#include "../../events/SDL_mouse_c.h"
 #include "../SDL_sysvideo.h"
 #include "SDL_dosvideo.h"
 
@@ -33,7 +33,7 @@
 #include "SDL_dosevents_c.h"
 
 // Scancode table: https://www.plantation-productions.com/Webster/www.artofasm.com/DOS/pdf/apndxc.pdf
-static const SDL_Scancode DOSVESA_ScancodeMapping[] = {  // index is the scancode from the IRQ1 handler bitwise-ANDed against 0x7F.
+static const SDL_Scancode DOSVESA_ScancodeMapping[] = { // index is the scancode from the IRQ1 handler bitwise-ANDed against 0x7F.
     /* 0x00 */ SDL_SCANCODE_UNKNOWN,
     /* 0x01 */ SDL_SCANCODE_ESCAPE,
     /* 0x02 */ SDL_SCANCODE_1,
@@ -131,7 +131,7 @@ static const SDL_Scancode DOSVESA_ScancodeMapping[] = {  // index is the scancod
 };
 
 // Extended scancode table for keys prefixed with 0xE0
-static const SDL_Scancode DOSVESA_ExtendedScancodeMapping[] = {  // index is the scancode byte following the 0xE0 prefix, masked with 0x7F.
+static const SDL_Scancode DOSVESA_ExtendedScancodeMapping[] = { // index is the scancode byte following the 0xE0 prefix, masked with 0x7F.
     /* 0x00 */ SDL_SCANCODE_UNKNOWN,
     /* 0x01 */ SDL_SCANCODE_UNKNOWN,
     /* 0x02 */ SDL_SCANCODE_UNKNOWN,
@@ -176,7 +176,7 @@ static const SDL_Scancode DOSVESA_ExtendedScancodeMapping[] = {  // index is the
     /* 0x27 */ SDL_SCANCODE_UNKNOWN,
     /* 0x28 */ SDL_SCANCODE_UNKNOWN,
     /* 0x29 */ SDL_SCANCODE_UNKNOWN,
-    /* 0x2A */ SDL_SCANCODE_UNKNOWN,  // fake left shift, ignore
+    /* 0x2A */ SDL_SCANCODE_UNKNOWN, // fake left shift, ignore
     /* 0x2B */ SDL_SCANCODE_UNKNOWN,
     /* 0x2C */ SDL_SCANCODE_UNKNOWN,
     /* 0x2D */ SDL_SCANCODE_UNKNOWN,
@@ -189,7 +189,7 @@ static const SDL_Scancode DOSVESA_ExtendedScancodeMapping[] = {  // index is the
     /* 0x33 */ SDL_SCANCODE_UNKNOWN,
     /* 0x34 */ SDL_SCANCODE_UNKNOWN,
     /* 0x35 */ SDL_SCANCODE_KP_DIVIDE,
-    /* 0x36 */ SDL_SCANCODE_UNKNOWN,  // fake right shift, ignore
+    /* 0x36 */ SDL_SCANCODE_UNKNOWN, // fake right shift, ignore
     /* 0x37 */ SDL_SCANCODE_PRINTSCREEN,
     /* 0x38 */ SDL_SCANCODE_RALT,
     /* 0x39 */ SDL_SCANCODE_UNKNOWN,
@@ -206,7 +206,7 @@ static const SDL_Scancode DOSVESA_ExtendedScancodeMapping[] = {  // index is the
     /* 0x43 */ SDL_SCANCODE_UNKNOWN,
     /* 0x44 */ SDL_SCANCODE_UNKNOWN,
     /* 0x45 */ SDL_SCANCODE_UNKNOWN,
-    /* 0x46 */ SDL_SCANCODE_PAUSE,  // Ctrl+Break sends E0 46 E0 C6
+    /* 0x46 */ SDL_SCANCODE_PAUSE, // Ctrl+Break sends E0 46 E0 C6
     /* 0x47 */ SDL_SCANCODE_HOME,
     /* 0x48 */ SDL_SCANCODE_UP,
     /* 0x49 */ SDL_SCANCODE_PAGEUP,
@@ -260,7 +260,7 @@ void DOSVESA_PumpEvents(SDL_VideoDevice *device)
 
         // 0xE1 prefix: Pause key sends E1 1D 45 E1 9D C5. Emit PAUSE press+release and consume the rest.
         if (event == 0xE1) {
-            pause_sequence_remaining = 5;  // skip the next 5 bytes
+            pause_sequence_remaining = 5; // skip the next 5 bytes
             SDL_SendKeyboardKey(0, SDL_GLOBAL_KEYBOARD_ID, 0, SDL_SCANCODE_PAUSE, true);
             SDL_SendKeyboardKey(0, SDL_GLOBAL_KEYBOARD_ID, 0, SDL_SCANCODE_PAUSE, false);
             continue;
@@ -272,7 +272,7 @@ void DOSVESA_PumpEvents(SDL_VideoDevice *device)
             continue;
         }
 
-        const int scancode = (int) (event & 0x7F);
+        const int scancode = (int)(event & 0x7F);
         const bool pressed = ((event & 0x80) == 0);
 
         if (is_extended) {
@@ -291,42 +291,42 @@ void DOSVESA_PumpEvents(SDL_VideoDevice *device)
     }
 
     SDL_Mouse *mouse = SDL_GetMouse();
-    if (mouse->internal) {  // if non-NULL, there's a mouse detected on the system.
+    if (mouse->internal) { // if non-NULL, there's a mouse detected on the system.
         __dpmi_regs regs;
 
-        regs.x.ax = 0x3;   // read mouse buttons and position.
+        regs.x.ax = 0x3; // read mouse buttons and position.
         __dpmi_int(0x33, &regs);
-        const Uint16 buttons = (int) (Sint16) regs.x.bx;
+        const Uint16 buttons = (int)(Sint16)regs.x.bx;
 
         SDL_SendMouseButton(0, mouse->focus, SDL_DEFAULT_MOUSE_ID, SDL_BUTTON_LEFT, (buttons & (1 << 0)) != 0);
         SDL_SendMouseButton(0, mouse->focus, SDL_DEFAULT_MOUSE_ID, SDL_BUTTON_RIGHT, (buttons & (1 << 1)) != 0);
         SDL_SendMouseButton(0, mouse->focus, SDL_DEFAULT_MOUSE_ID, SDL_BUTTON_MIDDLE, (buttons & (1 << 2)) != 0);
 
         if (!mouse->relative_mode) {
-            const int x = (int) (Sint16) regs.x.cx;  // part of function 0x3's return value.
-            const int y = (int) (Sint16) regs.x.dx;
+            const int x = (int)(Sint16)regs.x.cx; // part of function 0x3's return value.
+            const int y = (int)(Sint16)regs.x.dx;
             SDL_SendMouseMotion(0, mouse->focus, SDL_DEFAULT_MOUSE_ID, false, x, y);
         } else {
-            regs.x.ax = 0xB;   // read motion counters
+            regs.x.ax = 0xB; // read motion counters
             __dpmi_int(0x33, &regs);
             // values returned here are -32768 to 32767
             const SDL_VideoData *viddata = device->internal;
             const float MICKEYS_PER_HPIXEL = viddata->mickeys_per_hpixel;
             const float MICKEYS_PER_VPIXEL = viddata->mickeys_per_vpixel;
-            const int mickeys_x = (int) (Sint16) regs.x.cx;
-            const int mickeys_y = (int) (Sint16) regs.x.dx;
+            const int mickeys_x = (int)(Sint16)regs.x.cx;
+            const int mickeys_y = (int)(Sint16)regs.x.dx;
             SDL_SendMouseMotion(0, mouse->focus, SDL_DEFAULT_MOUSE_ID, true, mickeys_x / MICKEYS_PER_HPIXEL, mickeys_y / MICKEYS_PER_VPIXEL);
         }
     }
 }
 
-static void KeyboardIRQHandler(void)  // this is wrapped in a thing that handles IRET, etc.
+static void KeyboardIRQHandler(void) // this is wrapped in a thing that handles IRET, etc.
 {
     keyevents_ringbuffer[keyevents_head] = inportb(0x60);
     keyevents_head = (keyevents_head + 1) & (SDL_arraysize(keyevents_ringbuffer) - 1);
     DOS_EndOfInterrupt(1);
 }
-static void KeyboardIRQHandler_End(void) { }  // end-of-ISR label for memory locking
+static void KeyboardIRQHandler_End(void) {} // end-of-ISR label for memory locking
 
 void DOSVESA_InitKeyboard(SDL_VideoDevice *device)
 {
@@ -351,12 +351,12 @@ void DOSVESA_QuitKeyboard(SDL_VideoDevice *device)
     {
         __dpmi_regs regs;
         for (;;) {
-            regs.h.ah = 0x01;  // BIOS: check for keystroke
+            regs.h.ah = 0x01; // BIOS: check for keystroke
             __dpmi_int(0x16, &regs);
-            if (regs.x.flags & 0x40) {  // ZF set = buffer empty
+            if (regs.x.flags & 0x40) { // ZF set = buffer empty
                 break;
             }
-            regs.h.ah = 0x00;  // BIOS: read keystroke (removes it)
+            regs.h.ah = 0x00; // BIOS: read keystroke (removes it)
             __dpmi_int(0x16, &regs);
         }
     }

@@ -39,7 +39,7 @@
 
 // Thread table — static array, no dynamic allocation needed
 static DOS_ThreadContext threads[DOS_MAX_THREADS];
-static int current_thread = 0;  // Index of currently running thread
+static int current_thread = 0; // Index of currently running thread
 static bool scheduler_initialized = false;
 
 // Find the next runnable thread using round-robin scheduling.
@@ -52,7 +52,7 @@ static int FindNextRunnable(int start)
             return idx;
         }
     }
-    return -1;  // No other thread is runnable
+    return -1; // No other thread is runnable
 }
 
 // Trampoline function that runs on a new thread's stack.
@@ -72,7 +72,8 @@ static void ThreadTrampoline(void)
     DOS_ExitThread(result);
 
     // Should never reach here
-    for (;;) {}
+    for (;;) {
+    }
 }
 
 void DOS_SchedulerInit(void)
@@ -121,7 +122,7 @@ int DOS_CreateThread(int (*fn)(void *), void *arg, size_t stack_size)
     }
 
     if (tid < 0) {
-        return -1;  // No free slots
+        return -1; // No free slots
     }
 
     if (stack_size == 0) {
@@ -161,12 +162,12 @@ int DOS_CreateThread(int (*fn)(void *), void *arg, size_t stack_size)
         // Stack grows downward, so SP starts at the top.
         // Align to 16 bytes for ABI compliance.
         Uint8 *stack_top = (Uint8 *)stack + stack_size;
-        stack_top = (Uint8 *)((uintptr_t)stack_top & ~0xFUL);  // 16-byte align
+        stack_top = (Uint8 *)((uintptr_t)stack_top & ~0xFUL); // 16-byte align
 
         // Leave room for a fake return address (the trampoline never returns,
         // but the ABI expects one on the stack at function entry)
         stack_top -= sizeof(void *);
-        *(void **)stack_top = NULL;  // Fake return address
+        *(void **)stack_top = NULL; // Fake return address
 
         ctx->env[0].__esp = (unsigned long)(uintptr_t)stack_top;
         ctx->env[0].__ebp = (unsigned long)(uintptr_t)stack_top;
@@ -186,7 +187,7 @@ void DOS_Yield(void)
 
     int next = FindNextRunnable(current_thread);
     if (next < 0) {
-        return;  // No other runnable thread, continue current
+        return; // No other runnable thread, continue current
     }
 
     int prev = current_thread;
@@ -237,7 +238,7 @@ void DOS_ExitThread(int status)
     // (This shouldn't happen in practice — the main thread should
     // always be runnable or waiting.)
     for (;;) {
-        __asm__ __volatile__("hlt");  // Wait for interrupt before retrying
+        __asm__ __volatile__("hlt"); // Wait for interrupt before retrying
         next = FindNextRunnable(current_thread);
         if (next >= 0) {
             current_thread = next;
@@ -298,7 +299,7 @@ void DOS_BlockCurrentThread(void)
 void DOS_DestroyThread(int thread_id)
 {
     if (thread_id <= 0 || thread_id >= DOS_MAX_THREADS) {
-        return;  // Can't destroy main thread (0) or invalid IDs
+        return; // Can't destroy main thread (0) or invalid IDs
     }
 
     DOS_ThreadContext *ctx = &threads[thread_id];

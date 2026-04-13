@@ -25,9 +25,9 @@
 /* DOS thread management routines for SDL — cooperative threading via
    the DOS mini-scheduler (no OS-level threads on DOS). */
 
+#include "../../core/dos/SDL_dos_scheduler.h"
 #include "../SDL_systhread.h"
 #include "../SDL_thread_c.h"
-#include "../../core/dos/SDL_dos_scheduler.h"
 
 static int ThreadEntry(void *arg)
 {

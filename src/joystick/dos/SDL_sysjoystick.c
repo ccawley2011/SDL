@@ -22,12 +22,12 @@
 
 #ifdef SDL_JOYSTICK_DOS
 
+#include <dpmi.h> /* for __dpmi_regs, __dpmi_int */
 #include <limits.h>
-#include <dpmi.h>  /* for __dpmi_regs, __dpmi_int */
-#include <pc.h>    /* for inportb */
+#include <pc.h> /* for inportb */
 
-#include "../SDL_sysjoystick.h"
 #include "../SDL_joystick_c.h"
+#include "../SDL_sysjoystick.h"
 
 #define GAMEPORT 0x201
 
@@ -36,9 +36,10 @@ static bool dos_joystick_detected = false;
 static SDL_JoystickID dos_joystick_id = 0;
 static SDL_JoystickID dos_next_instance_id = 1;
 static Uint64 dos_joystick_next_poll_ns = 0;
-#define DOS_JOYSTICK_POLL_INTERVAL_NS SDL_MS_TO_NS(16)  /* ~60 Hz is plenty for a 2-axis gameport stick */
+#define DOS_JOYSTICK_POLL_INTERVAL_NS SDL_MS_TO_NS(16) /* ~60 Hz is plenty for a 2-axis gameport stick */
 
-struct joystick_hwdata {
+struct joystick_hwdata
+{
     int axis_min[2];    /* minimum raw axis values seen */
     int axis_max[2];    /* maximum raw axis values seen */
     int axis_center[2]; /* center raw axis values (captured on first read) */
@@ -54,8 +55,8 @@ static bool ProbeGameport(void)
 {
     __dpmi_regs regs;
     SDL_zero(regs);
-    regs.x.ax = 0x8400;  /* INT 15h AH=84h */
-    regs.x.dx = 0x0000;  /* subfunction 0: read button state */
+    regs.x.ax = 0x8400; /* INT 15h AH=84h */
+    regs.x.dx = 0x0000; /* subfunction 0: read button state */
     __dpmi_int(0x15, &regs);
     /* Carry flag set = no joystick BIOS support */
     return !(regs.x.flags & 0x01);
@@ -71,16 +72,16 @@ static void ReadGameportAxes(int *axis_x, int *axis_y)
 {
     __dpmi_regs regs;
     SDL_zero(regs);
-    regs.x.ax = 0x8400;  /* INT 15h AH=84h */
-    regs.x.dx = 0x0001;  /* subfunction 1: read axis values */
+    regs.x.ax = 0x8400; /* INT 15h AH=84h */
+    regs.x.dx = 0x0001; /* subfunction 1: read axis values */
     __dpmi_int(0x15, &regs);
     if (regs.x.flags & 0x01) {
         /* BIOS call failed */
         *axis_x = -1;
         *axis_y = -1;
     } else {
-        *axis_x = (int)regs.x.ax;  /* joystick 1 X axis */
-        *axis_y = (int)regs.x.bx;  /* joystick 1 Y axis */
+        *axis_x = (int)regs.x.ax; /* joystick 1 X axis */
+        *axis_y = (int)regs.x.bx; /* joystick 1 Y axis */
     }
 }
 
@@ -90,7 +91,7 @@ static Sint16 CalibrateAxis(int raw, struct joystick_hwdata *hwdata, int axis)
     int centered;
 
     if (raw < 0) {
-        return 0;  /* axis not connected, report center */
+        return 0; /* axis not connected, report center */
     }
 
     if (raw < hwdata->axis_min[axis]) {
@@ -111,7 +112,7 @@ static Sint16 CalibrateAxis(int raw, struct joystick_hwdata *hwdata, int axis)
 
     range = hwdata->axis_max[axis] - hwdata->axis_min[axis];
     if (range < 10) {
-        range = 10;  /* avoid division issues */
+        range = 10; /* avoid division issues */
     }
 
     /* Map to -32768..32767 */
@@ -262,10 +263,10 @@ static void DOS_JoystickUpdate(SDL_Joystick *joystick)
 
     /* Buttons are a passive port read (no timing loop), always safe to poll */
     val = inportb(GAMEPORT);
-    SDL_SendJoystickButton(0, joystick, 0, !(val & 0x10));  /* button 1 */
-    SDL_SendJoystickButton(0, joystick, 1, !(val & 0x20));  /* button 2 */
-    SDL_SendJoystickButton(0, joystick, 2, !(val & 0x40));  /* button 3 */
-    SDL_SendJoystickButton(0, joystick, 3, !(val & 0x80));  /* button 4 */
+    SDL_SendJoystickButton(0, joystick, 0, !(val & 0x10)); /* button 1 */
+    SDL_SendJoystickButton(0, joystick, 1, !(val & 0x20)); /* button 2 */
+    SDL_SendJoystickButton(0, joystick, 2, !(val & 0x40)); /* button 3 */
+    SDL_SendJoystickButton(0, joystick, 3, !(val & 0x80)); /* button 4 */
 
     /* Throttle axis reads — BIOS INT 15h subfunction 1 does an internal
        timing loop that is very expensive. ~60 Hz is more than enough for

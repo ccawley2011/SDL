@@ -22,18 +22,18 @@
 
 #ifdef SDL_VIDEO_DRIVER_DOSVESA
 
+#include "../../SDL_properties_c.h"
+#include "../../events/SDL_mouse_c.h"
 #include "../SDL_sysvideo.h"
-#include "SDL_dosvideo.h"
 #include "SDL_dosframebuffer_c.h"
 #include "SDL_dosmouse.h"
-#include "../../events/SDL_mouse_c.h"
-#include "../../SDL_properties_c.h"
+#include "SDL_dosvideo.h"
 
-#include <pc.h>  // for inportb, outportb
-#include <sys/movedata.h>  // for dosmemput (banked framebuffer writes)
+#include <pc.h>           // for inportb, outportb
+#include <sys/movedata.h> // for dosmemput (banked framebuffer writes)
 
 // note that DOS_SURFACE's value is the same string that the dummy driver uses.
-#define DOS_SURFACE "SDL.internal.window.surface"
+#define DOS_SURFACE     "SDL.internal.window.surface"
 #define DOS_LFB_SURFACE "SDL.internal.window.lfb_surface"
 
 bool DOSVESA_CreateWindowFramebuffer(SDL_VideoDevice *device, SDL_Window *window, SDL_PixelFormat *format, void **pixels, int *pitch)
@@ -83,7 +83,7 @@ bool DOSVESA_CreateWindowFramebuffer(SDL_VideoDevice *device, SDL_Window *window
                 SDL_SetSurfacePalette(lfb_surface, palette);
             }
         }
-        data->palette_version = 0;  // force DAC update on first present
+        data->palette_version = 0; // force DAC update on first present
 
         // Also program the VGA DAC to all-black right now, so no flash
         // of stale/white palette colors before the first present.
@@ -159,11 +159,8 @@ static void BankedFramebufferCopyRect(const SDL_DisplayModeData *mdata,
     // row width matches dst pitch, the data is contiguous in both source and
     // destination — we can copy it as one flat block, minimizing dosmemput calls.
     if (row_bytes == src->pitch && row_bytes == dst_pitch) {
-        const Uint8 *src_data = (const Uint8 *)src->pixels
-                              + src_rect->y * src->pitch
-                              + src_rect->x * bytes_per_pixel;
-        Uint32 dst_offset = (Uint32)(dst_y + src_rect->y) * dst_pitch
-                          + (Uint32)(dst_x + src_rect->x) * bytes_per_pixel;
+        const Uint8 *src_data = (const Uint8 *)src->pixels + src_rect->y * src->pitch + src_rect->x * bytes_per_pixel;
+        Uint32 dst_offset = (Uint32)(dst_y + src_rect->y) * dst_pitch + (Uint32)(dst_x + src_rect->x) * bytes_per_pixel;
         int total_bytes = row_bytes * src_rect->h;
         int src_off = 0;
 
@@ -204,11 +201,8 @@ static void BankedFramebufferCopyRect(const SDL_DisplayModeData *mdata,
     }
 
     for (int y = 0; y < src_rect->h; y++) {
-        Uint32 dst_offset = (Uint32)(dst_y + src_rect->y + y) * dst_pitch
-                          + (Uint32)(dst_x + src_rect->x) * bytes_per_pixel;
-        const Uint8 *src_row = (const Uint8 *)src->pixels
-                             + (src_rect->y + y) * src->pitch
-                             + src_rect->x * bytes_per_pixel;
+        Uint32 dst_offset = (Uint32)(dst_y + src_rect->y + y) * dst_pitch + (Uint32)(dst_x + src_rect->x) * bytes_per_pixel;
+        const Uint8 *src_row = (const Uint8 *)src->pixels + (src_rect->y + y) * src->pitch + src_rect->x * bytes_per_pixel;
         int bytes_remaining = row_bytes;
         int src_off = 0;
 
@@ -227,7 +221,7 @@ static void BankedFramebufferCopyRect(const SDL_DisplayModeData *mdata,
             if (bank != *current_bank) {
                 __dpmi_regs regs;
                 SDL_zero(regs);
-                regs.x.bx = 0;       // Window A
+                regs.x.bx = 0; // Window A
                 regs.x.dx = (Uint16)bank;
                 if (win_func_ptr) {
                     // Call WinFuncPtr directly — faster than INT 10h.
@@ -254,8 +248,12 @@ static void BankedFramebufferCopyRect(const SDL_DisplayModeData *mdata,
 
 static void WaitForVBlank(void)
 {
-    while (inportb(0x3DA) & 0x08) { SDL_CPUPauseInstruction(); }   // wait for non-vblank
-    while (!(inportb(0x3DA) & 0x08)) { SDL_CPUPauseInstruction(); } // wait for vblank
+    while (inportb(0x3DA) & 0x08) {
+        SDL_CPUPauseInstruction();
+    } // wait for non-vblank
+    while (!(inportb(0x3DA) & 0x08)) {
+        SDL_CPUPauseInstruction();
+    } // wait for vblank
 }
 
 static void ProgramVGADAC(SDL_Palette *palette)
@@ -272,7 +270,7 @@ bool DOSVESA_UpdateWindowFramebuffer(SDL_VideoDevice *device, SDL_Window *window
 {
     SDL_VideoData *vdata = device->internal;
     SDL_WindowData *windata = window->internal;
-    SDL_Surface *src = (SDL_Surface *) SDL_GetPointerProperty(SDL_GetWindowProperties(window), DOS_SURFACE, NULL);
+    SDL_Surface *src = (SDL_Surface *)SDL_GetPointerProperty(SDL_GetWindowProperties(window), DOS_SURFACE, NULL);
     if (!src) {
         return SDL_SetError("Couldn't find DOS surface for window");
     }
@@ -298,7 +296,7 @@ bool DOSVESA_UpdateWindowFramebuffer(SDL_VideoDevice *device, SDL_Window *window
 
             if (!vdata->banked_mode) {
                 // Also update the LFB surface palette for correct blitting
-                SDL_Surface *dst = (SDL_Surface *) SDL_GetPointerProperty(SDL_GetWindowProperties(window), DOS_LFB_SURFACE, NULL);
+                SDL_Surface *dst = (SDL_Surface *)SDL_GetPointerProperty(SDL_GetWindowProperties(window), DOS_LFB_SURFACE, NULL);
                 if (dst) {
                     SDL_Palette *dst_palette = SDL_GetSurfacePalette(dst);
                     if (dst_palette && dst_palette != src_palette) {
@@ -329,24 +327,34 @@ bool DOSVESA_UpdateWindowFramebuffer(SDL_VideoDevice *device, SDL_Window *window
         SDL_Mouse *mouse = SDL_GetMouse();
         SDL_Surface *cursor = NULL;
         SDL_Rect cursorrect;
-        SDL_Rect cursor_clipped;  // cursorrect clipped to src bounds
+        SDL_Rect cursor_clipped; // cursorrect clipped to src bounds
         SDL_Surface *cursor_save = NULL;
         bool have_cursor_rect = false;
 
         if (mouse && mouse->internal && !mouse->relative_mode && mouse->cursor_visible && mouse->cur_cursor && mouse->cur_cursor->internal) {
             cursor = mouse->cur_cursor->internal->surface;
             if (cursor) {
-                cursorrect.x = SDL_clamp((int) mouse->x, 0, window->w) - mouse->cur_cursor->internal->hot_x;
-                cursorrect.y = SDL_clamp((int) mouse->y, 0, window->h) - mouse->cur_cursor->internal->hot_y;
+                cursorrect.x = SDL_clamp((int)mouse->x, 0, window->w) - mouse->cur_cursor->internal->hot_x;
+                cursorrect.y = SDL_clamp((int)mouse->y, 0, window->h) - mouse->cur_cursor->internal->hot_y;
                 cursorrect.w = cursor->w;
                 cursorrect.h = cursor->h;
 
                 // Clip cursor rect to src bounds for save/restore.
                 cursor_clipped = cursorrect;
-                if (cursor_clipped.x < 0) { cursor_clipped.w += cursor_clipped.x; cursor_clipped.x = 0; }
-                if (cursor_clipped.y < 0) { cursor_clipped.h += cursor_clipped.y; cursor_clipped.y = 0; }
-                if (cursor_clipped.x + cursor_clipped.w > src->w) { cursor_clipped.w = src->w - cursor_clipped.x; }
-                if (cursor_clipped.y + cursor_clipped.h > src->h) { cursor_clipped.h = src->h - cursor_clipped.y; }
+                if (cursor_clipped.x < 0) {
+                    cursor_clipped.w += cursor_clipped.x;
+                    cursor_clipped.x = 0;
+                }
+                if (cursor_clipped.y < 0) {
+                    cursor_clipped.h += cursor_clipped.y;
+                    cursor_clipped.y = 0;
+                }
+                if (cursor_clipped.x + cursor_clipped.w > src->w) {
+                    cursor_clipped.w = src->w - cursor_clipped.x;
+                }
+                if (cursor_clipped.y + cursor_clipped.h > src->h) {
+                    cursor_clipped.h = src->h - cursor_clipped.y;
+                }
 
                 if (cursor_clipped.w > 0 && cursor_clipped.h > 0) {
                     have_cursor_rect = true;
@@ -394,10 +402,20 @@ bool DOSVESA_UpdateWindowFramebuffer(SDL_VideoDevice *device, SDL_Window *window
         for (int r = 0; r < numrects; r++) {
             // Clip the dirty rect to the source surface bounds.
             SDL_Rect rect = rects[r];
-            if (rect.x < 0) { rect.w += rect.x; rect.x = 0; }
-            if (rect.y < 0) { rect.h += rect.y; rect.y = 0; }
-            if (rect.x + rect.w > src->w) { rect.w = src->w - rect.x; }
-            if (rect.y + rect.h > src->h) { rect.h = src->h - rect.y; }
+            if (rect.x < 0) {
+                rect.w += rect.x;
+                rect.x = 0;
+            }
+            if (rect.y < 0) {
+                rect.h += rect.y;
+                rect.y = 0;
+            }
+            if (rect.x + rect.w > src->w) {
+                rect.w = src->w - rect.x;
+            }
+            if (rect.y + rect.h > src->h) {
+                rect.h = src->h - rect.y;
+            }
             if (rect.w <= 0 || rect.h <= 0) {
                 continue;
             }
@@ -433,7 +451,7 @@ bool DOSVESA_UpdateWindowFramebuffer(SDL_VideoDevice *device, SDL_Window *window
 
     } else {
         // --- LFB path (original code) ---
-        SDL_Surface *dst = (SDL_Surface *) SDL_GetPointerProperty(SDL_GetWindowProperties(window), DOS_LFB_SURFACE, NULL);
+        SDL_Surface *dst = (SDL_Surface *)SDL_GetPointerProperty(SDL_GetWindowProperties(window), DOS_LFB_SURFACE, NULL);
         if (!dst) {
             return SDL_SetError("Couldn't find VESA linear framebuffer surface for window");
         }
@@ -446,8 +464,8 @@ bool DOSVESA_UpdateWindowFramebuffer(SDL_VideoDevice *device, SDL_Window *window
         if (mouse && mouse->internal && !mouse->relative_mode && mouse->cursor_visible && mouse->cur_cursor && mouse->cur_cursor->internal) {
             cursor = mouse->cur_cursor->internal->surface;
             if (cursor) {
-                cursorrect.x = dstrect.x + SDL_clamp((int) mouse->x, 0, window->w) - mouse->cur_cursor->internal->hot_x;
-                cursorrect.y = dstrect.y + SDL_clamp((int) mouse->y, 0, window->h) - mouse->cur_cursor->internal->hot_y;
+                cursorrect.x = dstrect.x + SDL_clamp((int)mouse->x, 0, window->w) - mouse->cur_cursor->internal->hot_x;
+                cursorrect.y = dstrect.y + SDL_clamp((int)mouse->y, 0, window->h) - mouse->cur_cursor->internal->hot_y;
             }
         }
 
@@ -485,7 +503,7 @@ bool DOSVESA_UpdateWindowFramebuffer(SDL_VideoDevice *device, SDL_Window *window
             SDL_zero(regs);
             regs.x.ax = 0x4F07;
             regs.x.bx = 0x0080;
-            regs.x.cx = 0;       // first pixel in scan line
+            regs.x.cx = 0; // first pixel in scan line
             regs.x.dx = first_scanline;
             __dpmi_int(0x10, &regs);
 
@@ -515,7 +533,7 @@ void DOSVESA_DestroyWindowFramebuffer(SDL_VideoDevice *device, SDL_Window *windo
 {
     SDL_VideoData *data = device->internal;
     if (!data->banked_mode) {
-        SDL_Surface *lfb_surface = (SDL_Surface *) SDL_GetPointerProperty(SDL_GetWindowProperties(window), DOS_LFB_SURFACE, NULL);
+        SDL_Surface *lfb_surface = (SDL_Surface *)SDL_GetPointerProperty(SDL_GetWindowProperties(window), DOS_LFB_SURFACE, NULL);
         if (lfb_surface && data->mapping.size) {
             SDL_ClearSurface(lfb_surface, 0.0f, 0.0f, 0.0f, 0.0f);
         }

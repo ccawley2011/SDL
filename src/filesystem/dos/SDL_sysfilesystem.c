@@ -22,8 +22,8 @@
 
 #ifdef SDL_FILESYSTEM_DOS
 
-#include <sys/stat.h>
 #include <dir.h>
+#include <sys/stat.h>
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 // System dependent filesystem routines
@@ -32,7 +32,7 @@
 
 char *SDL_SYS_GetBasePath(void)
 {
-    extern const char *SDL_argv0;  // from src/main/dos/SDL_sysmain_runapp.c
+    extern const char *SDL_argv0; // from src/main/dos/SDL_sysmain_runapp.c
     char *searched = searchpath(SDL_argv0);
     if (!searched) {
         SDL_SetError("argv[0] not found by searchpath");

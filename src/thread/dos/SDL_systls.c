@@ -26,8 +26,8 @@
    the scheduler's thread ID. With only DOS_MAX_THREADS (8) threads,
    a simple static array is efficient and avoids any dynamic allocation. */
 
-#include "../SDL_thread_c.h"
 #include "../../core/dos/SDL_dos_scheduler.h"
+#include "../SDL_thread_c.h"
 
 static SDL_TLSData *tls_data[DOS_MAX_THREADS];
 

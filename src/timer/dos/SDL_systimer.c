@@ -22,8 +22,8 @@
 
 #ifdef SDL_TIMER_DOS
 
-#include <time.h>   /* uclock, uclock_t, UCLOCKS_PER_SEC */
-#include <dos.h>    /* delay */
+#include <dos.h>  /* delay */
+#include <time.h> /* uclock, uclock_t, UCLOCKS_PER_SEC */
 
 #include "../../core/dos/SDL_dos_scheduler.h"
 

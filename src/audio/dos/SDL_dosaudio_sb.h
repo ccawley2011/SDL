@@ -23,8 +23,8 @@
 #ifndef SDL_dosaudio_sb_h_
 #define SDL_dosaudio_sb_h_
 
-#include "../SDL_sysaudio.h"
 #include "../../core/dos/SDL_dos.h"
+#include "../SDL_sysaudio.h"
 
 struct SDL_PrivateAudioData
 {

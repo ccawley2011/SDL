@@ -37,30 +37,32 @@ extern "C" {
 #define DOS_DEFAULT_STACK_SIZE (64 * 1024)
 
 // Thread states
-typedef enum {
-    DOS_THREAD_FREE = 0,   // Slot is available
-    DOS_THREAD_READY,      // Runnable
-    DOS_THREAD_RUNNING,    // Currently executing
-    DOS_THREAD_BLOCKED,    // Waiting on a semaphore/mutex
-    DOS_THREAD_FINISHED    // Thread function returned
+typedef enum
+{
+    DOS_THREAD_FREE = 0, // Slot is available
+    DOS_THREAD_READY,    // Runnable
+    DOS_THREAD_RUNNING,  // Currently executing
+    DOS_THREAD_BLOCKED,  // Waiting on a semaphore/mutex
+    DOS_THREAD_FINISHED  // Thread function returned
 } DOS_ThreadState;
 
 // Per-thread context
-typedef struct DOS_ThreadContext {
-    jmp_buf         env;            // Saved CPU state for context switch
+typedef struct DOS_ThreadContext
+{
+    jmp_buf env; // Saved CPU state for context switch
     DOS_ThreadState state;
-    int             id;             // Thread ID (index into thread table)
-    void           *stack_base;     // malloc'd stack memory
-    size_t          stack_size;
-    int             exit_status;    // Return value from thread function
+    int id;           // Thread ID (index into thread table)
+    void *stack_base; // malloc'd stack memory
+    size_t stack_size;
+    int exit_status; // Return value from thread function
 
     // Entry point
-    int           (*entry_fn)(void *);
-    void           *entry_arg;
+    int (*entry_fn)(void *);
+    void *entry_arg;
 
     // Join support
-    volatile bool   finished;       // Set when thread function returns
-    int             join_waiter;    // ID of thread waiting in WaitThread, or -1
+    volatile bool finished; // Set when thread function returns
+    int join_waiter;        // ID of thread waiting in WaitThread, or -1
 } DOS_ThreadContext;
 
 // Initialize the scheduler. Must be called before any thread operations.
