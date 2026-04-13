@@ -142,4 +142,4 @@ void DOS_UnhookInterrupt(DOS_InterruptHook *hook, bool disable_interrupt);
 }
 #endif
 
-#endif // _INCLUDED_WINDOWS_H
+#endif // SDL_dos_h_

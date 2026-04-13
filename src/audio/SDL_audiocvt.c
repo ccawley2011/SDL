@@ -512,10 +512,6 @@ bool SDL_SetAudioStreamPutCallback(SDL_AudioStream *stream, SDL_AudioStreamCallb
 
 void LockAudioStream(SDL_AudioStream *stream)
 {
-    #ifdef SDL_PLATFORM_DOS
-    extern void SDL_DOS_LockAudioStream(SDL_AudioStream *stream);
-    SDL_DOS_LockAudioStream(stream);
-    #endif
     SDL_LockMutex(stream->lock);
 }
 
@@ -530,10 +526,6 @@ bool SDL_LockAudioStream(SDL_AudioStream *stream)
 
 void UnlockAudioStream(SDL_AudioStream *stream)
 {
-    #ifdef SDL_PLATFORM_DOS
-    extern void SDL_DOS_UnlockAudioStream(SDL_AudioStream *stream);
-    SDL_DOS_UnlockAudioStream(stream);
-    #endif
     SDL_UnlockMutex(stream->lock);
 }
 

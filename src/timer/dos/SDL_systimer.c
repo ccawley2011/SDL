@@ -25,10 +25,19 @@
 #include <time.h>   /* uclock, uclock_t, UCLOCKS_PER_SEC */
 #include <dos.h>    /* delay */
 
+#include "../../core/dos/SDL_dos_scheduler.h"
+
 /* DJGPP's uclock() reprograms PIT channel 0 for a higher tick rate on first
    call, giving ~1.19 MHz resolution (UCLOCKS_PER_SEC == 1193180).  This is
    the same approach SDL2-dos used and gives sub-microsecond precision without
    any extra setup. */
+
+/* How often to yield during SDL_Delay, in milliseconds.  5 ms gives other
+   cooperative threads (loading, etc.) a chance to run without adding
+   significant overhead to the delay loop.  This also ensures audio pumping
+   (which happens when the main thread yields back to the event pump caller)
+   is not starved during long delays like frame-rate limiters. */
+#define DOS_YIELD_INTERVAL_MS 5
 
 Uint64 SDL_GetPerformanceCounter(void)
 {
@@ -43,13 +52,20 @@ Uint64 SDL_GetPerformanceFrequency(void)
 void SDL_SYS_DelayNS(Uint64 ns)
 {
     /* For delays >= 1 ms, use DJGPP's delay() which yields to the DPMI host.
-       For sub-millisecond delays, busy-wait on uclock(). */
+       For sub-millisecond delays, busy-wait on uclock().
+       We periodically call DOS_Yield() so cooperative threads can run. */
     if (ns >= SDL_NS_PER_MS) {
         Uint32 ms = (Uint32)(ns / SDL_NS_PER_MS);
-        if (ms > 0) {
-            delay(ms);
+        while (ms > 0) {
+            Uint32 chunk = ms;
+            if (chunk > DOS_YIELD_INTERVAL_MS) {
+                chunk = DOS_YIELD_INTERVAL_MS;
+            }
+            DOS_Yield();
+            delay(chunk);
+            ms -= chunk;
         }
-        ns -= (Uint64)ms * SDL_NS_PER_MS;
+        ns -= (Uint64)((Uint32)(ns / SDL_NS_PER_MS)) * SDL_NS_PER_MS;
     }
 
     /* Busy-wait for any remaining sub-millisecond portion */

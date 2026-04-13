@@ -66,7 +66,7 @@ static Uint8 ReadSoundBlasterDSP(void)
     return (Uint8) inportb(query_port);
 }
 
-volatile int audio_streams_locked = 0;
+
 static SDL_AudioDevice *opened_soundblaster_device = NULL;
 static volatile bool soundblaster_irq_pending = false;
 
@@ -97,32 +97,11 @@ void SDL_DOS_PumpAudio(void)
     soundblaster_irq_pending = false;
     DOS_EnableInterrupts();
 
-    if (pending && audio_streams_locked == 0) {
+    if (pending) {
         SDL_PlaybackAudioThreadIterate(opened_soundblaster_device);
     }
 }
 
-// this is sort of hacky, but we need to make sure the audio mixing doesn't
-//  run while an audio stream is locked, since we don't have real mutexes.
-// !!! FIXME: we should probably do this only for streams bound to an audio
-// !!! FIXME: device, but good enough for now.
-void SDL_DOS_LockAudioStream(SDL_AudioStream *stream)
-{
-    DOS_DisableInterrupts();
-    audio_streams_locked++;
-    DOS_EnableInterrupts();
-}
-
-void SDL_DOS_UnlockAudioStream(SDL_AudioStream *stream)
-{
-    DOS_DisableInterrupts();
-
-    if (audio_streams_locked > 0) {
-        --audio_streams_locked;
-    }
-
-    DOS_EnableInterrupts();
-}
 
 static bool DOSSOUNDBLASTER_OpenDevice(SDL_AudioDevice *device)
 {

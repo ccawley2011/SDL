@@ -32,6 +32,7 @@
 #ifdef SDL_AUDIO_DRIVER_DOS_SOUNDBLASTER
 #include "../../audio/dos/SDL_dosaudio_sb.h"
 #endif
+#include "../../core/dos/SDL_dos_scheduler.h"
 #include "SDL_dosevents_c.h"
 
 // Scancode table: https://www.plantation-productions.com/Webster/www.artofasm.com/DOS/pdf/apndxc.pdf
@@ -244,6 +245,10 @@ void DOSVESA_PumpEvents(SDL_VideoDevice *device)
 #ifdef SDL_AUDIO_DRIVER_DOS_SOUNDBLASTER
     SDL_DOS_PumpAudio();
 #endif
+
+    /* Give cooperative threads a chance to run (e.g. loading threads).
+       This is the primary yield point in the main game loop. */
+    DOS_Yield();
 
     static bool is_extended = false;
     static int pause_sequence_remaining = 0;

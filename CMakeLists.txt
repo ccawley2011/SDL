@@ -3364,6 +3364,17 @@ elseif(DOS)
   sdl_glob_sources("${SDL3_SOURCE_DIR}/src/joystick/dos/*.c")
   set(HAVE_SDL_JOYSTICK TRUE)
 
+  set(SDL_THREAD_DOS 1)
+  sdl_glob_sources(
+    "${SDL3_SOURCE_DIR}/src/thread/generic/SDL_syscond.c"
+    "${SDL3_SOURCE_DIR}/src/thread/generic/SDL_syscond_c.h"
+    "${SDL3_SOURCE_DIR}/src/thread/generic/SDL_sysrwlock.c"
+    "${SDL3_SOURCE_DIR}/src/thread/generic/SDL_sysrwlock_c.h"
+    "${SDL3_SOURCE_DIR}/src/thread/dos/*.c"
+    "${SDL3_SOURCE_DIR}/src/thread/dos/*.h"
+  )
+  set(HAVE_SDL_THREADS TRUE)
+
 elseif(NGAGE)
 
   enable_language(CXX)
@@ -3702,7 +3713,7 @@ endif()
 # We always need to have threads and timers around
 if(NOT HAVE_SDL_THREADS)
   # The Emscripten and N-Gage platform has been carefully vetted to work without threads
-  if(EMSCRIPTEN OR NGAGE OR DOS)
+  if(EMSCRIPTEN OR NGAGE)
     set(SDL_THREADS_DISABLED 1)
     sdl_glob_sources(
       "${SDL3_SOURCE_DIR}/src/thread/generic/*.c"
