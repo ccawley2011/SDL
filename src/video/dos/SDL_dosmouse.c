@@ -59,7 +59,7 @@ static SDL_Cursor *DOSVESA_CreateCursor(SDL_Surface *surface, int hot_x, int hot
         return NULL;
     }
 
-    // !!! FIXME: set a color key or decide to alpha-blend
+    SDL_SetSurfaceBlendMode(curdata->surface, SDL_BLENDMODE_BLEND);
 
     curdata->hot_x = hot_x;
     curdata->hot_y = hot_y;
@@ -146,6 +146,13 @@ void DOSVESA_InitMouse(SDL_VideoDevice *_this)
     }
 
     mouse->internal = SDL_calloc(1, 1);  // just something non-NULL (and safely freeable) to say "there's a mouse available."
+
+    // Query mouse sensitivity (mickeys per pixel) via INT 33h function 0x1B
+    SDL_VideoData *data = _this->internal;
+    regs.x.ax = 0x1B;  // Get Mouse Sensitivity
+    __dpmi_int(0x33, &regs);
+    data->mickeys_per_hpixel = (regs.x.bx > 0) ? (float)regs.x.bx : 8.0f;
+    data->mickeys_per_vpixel = (regs.x.cx > 0) ? (float)regs.x.cx : 16.0f;
 
     mouse->CreateCursor = DOSVESA_CreateCursor;
     mouse->ShowCursor = DOSVESA_ShowCursor;

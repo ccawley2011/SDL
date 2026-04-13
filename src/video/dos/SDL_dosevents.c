@@ -310,8 +310,9 @@ void DOSVESA_PumpEvents(SDL_VideoDevice *device)
             regs.x.ax = 0xB;   // read motion counters
             __dpmi_int(0x33, &regs);
             // values returned here are -32768 to 32767
-            const float MICKEYS_PER_HPIXEL = 4.0f;  // !!! FIXME: what should this be?
-            const float MICKEYS_PER_VPIXEL = 4.0f;
+            const SDL_VideoData *viddata = device->internal;
+            const float MICKEYS_PER_HPIXEL = viddata->mickeys_per_hpixel;
+            const float MICKEYS_PER_VPIXEL = viddata->mickeys_per_vpixel;
             const int mickeys_x = (int) (Sint16) regs.x.cx;
             const int mickeys_y = (int) (Sint16) regs.x.dx;
             SDL_SendMouseMotion(0, mouse->focus, SDL_DEFAULT_MOUSE_ID, true, mickeys_x / MICKEYS_PER_HPIXEL, mickeys_y / MICKEYS_PER_VPIXEL);

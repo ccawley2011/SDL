@@ -57,6 +57,10 @@ struct SDL_VideoData
     void *vbe_state_buffer;        // saved VBE state (from VBE 0x4F04)
     Uint32 vbe_state_buffer_size;  // size of the state buffer
 
+    // Mouse sensitivity (mickeys per pixel), queried from INT 33h function 0x1B
+    float mickeys_per_hpixel;  // horizontal mickeys per pixel (default: 8)
+    float mickeys_per_vpixel;  // vertical mickeys per pixel (default: 16)
+
     // Page-flipping (double-buffering) state
     int current_page;          // 0 or 1: which page is currently displayed
     Uint32 page_offset[2];    // byte offset of each page within video memory
