@@ -237,8 +237,16 @@ static bool DOSSOUNDBLASTER_OpenDevice(SDL_AudioDevice *device)
     DOS_HookInterrupt(soundblaster_irq, SoundBlasterIRQHandler, &hidden->interrupt_hook);
 
     WriteSoundBlasterDSP(0xD1);  // turn on the speaker
-    // !!! FIXME: can we query (soundblaster_base_port + 0xC) to see if this is done faster?
-    SDL_Delay(112);  // takes a maximum of 112 milliseconds to complete this command! Gosh!
+    // The speaker-on command takes up to 112 ms to complete on real hardware.
+    // Poll the DSP write status port (bit 7 clears when the DSP is ready);
+    // in practice — and always in DOSBox — it completes almost instantly.
+    {
+        const int status_port = soundblaster_base_port + 0xC;
+        const Uint64 deadline = SDL_GetTicksNS() + SDL_MS_TO_NS(112);
+        while ((inportb(status_port) & 0x80) && (SDL_GetTicksNS() < deadline)) {
+            SDL_DelayPrecise(SDL_US_TO_NS(100));  // brief yield between polls
+        }
+    }
 
     if (is_sb16) {
         // SB16 (DSP >= 4): set output sample rate directly

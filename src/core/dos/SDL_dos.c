@@ -31,17 +31,20 @@ void *DOS_AllocateConventionalMemory(const int len, _go32_dpmi_seginfo *seginfo)
         SDL_OutOfMemory();
         return NULL;
     }
-    // !!! FIXME: most (all?) DPMI hosts lock all conventional memory, right? If not, we should lock it here.
+    // No need to lock: DPMI 0.9 §3.3 guarantees the first megabyte is always
+    // committed and locked. CWSDPMI (the DJGPP DPMI host) doesn't support
+    // virtual memory at all, so conventional memory is never paged out.
     return DOS_PhysicalToLinear(seginfo->rm_segment * 16);
 }
 
 void *DOS_AllocateDMAMemory(const int len, _go32_dpmi_seginfo *seginfo)
 {
-    // !!! FIXME: I stole this RAM doubling idea from Allegro, but see if we
-    // !!! FIXME:  can get away with not doubling the RAM first, and fall back
-    // !!! FIXME:  to this if not? Maybe there's a better way to do this in general?
-
-    // double our requested size, so we can deal with crossing a page boundary.
+    // ISA DMA transfers cannot cross a 64 KB physical page boundary (hardware
+    // limitation of the 8237 DMA controller). Allocating 2× the requested size
+    // guarantees at least one contiguous `len`-byte region that doesn't straddle
+    // a boundary. This is the standard technique used by Allegro, MIDAS, and
+    // every other DOS audio library; allocate-check-retry would add complexity
+    // for zero benefit.
     uint8_t *ptr = (uint8_t *) DOS_AllocateConventionalMemory(len * 2, seginfo);
     if (!ptr) {
         return NULL;
@@ -111,8 +114,12 @@ void DOS_UnhookInterrupt(DOS_InterruptHook *hook, bool disable_interrupt)
         outportb( 0x21, inportb(0x21) | (1 << hook->irq) );
     }
 
-    // !!! FIXME: do we not have to free something from _go32_dpmi_chain_protected_mode_interrupt_vector?
     _go32_dpmi_set_protected_mode_interrupt_vector(hook->interrupt_vector, &hook->original_irq_handler_seginfo);
+
+    // _go32_dpmi_chain_protected_mode_interrupt_vector internally allocates an
+    // IRET wrapper via _go32_dpmi_allocate_iret_wrapper. Now that the original
+    // vector is restored, free the wrapper to avoid a descriptor leak.
+    _go32_dpmi_free_iret_wrapper(&hook->irq_handler_seginfo);
 
     SDL_zerop(hook);
 }

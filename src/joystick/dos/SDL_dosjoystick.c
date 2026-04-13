@@ -35,6 +35,8 @@
 static bool dos_joystick_detected = false;
 static SDL_JoystickID dos_joystick_id = 0;
 static SDL_JoystickID dos_next_instance_id = 1;
+static Uint64 dos_joystick_next_poll_ns = 0;
+#define DOS_JOYSTICK_POLL_INTERVAL_NS SDL_MS_TO_NS(16)  /* ~60 Hz is plenty for a 2-axis gameport stick */
 
 struct joystick_hwdata {
     int axis_min[2];    /* minimum raw axis values seen */
@@ -252,12 +254,28 @@ static void DOS_JoystickUpdate(SDL_Joystick *joystick)
     struct joystick_hwdata *hwdata = joystick->hwdata;
     int axis_x, axis_y;
     Uint8 val;
+    Uint64 now;
 
     if (!hwdata) {
         return;
     }
 
-    /* Read axes via BIOS INT 15h (no direct port I/O timing loops) */
+    /* Buttons are a passive port read (no timing loop), always safe to poll */
+    val = inportb(GAMEPORT);
+    SDL_SendJoystickButton(0, joystick, 0, !(val & 0x10));  /* button 1 */
+    SDL_SendJoystickButton(0, joystick, 1, !(val & 0x20));  /* button 2 */
+    SDL_SendJoystickButton(0, joystick, 2, !(val & 0x40));  /* button 3 */
+    SDL_SendJoystickButton(0, joystick, 3, !(val & 0x80));  /* button 4 */
+
+    /* Throttle axis reads — BIOS INT 15h subfunction 1 does an internal
+       timing loop that is very expensive. ~60 Hz is more than enough for
+       a 2-axis analog gameport stick. */
+    now = SDL_GetTicksNS();
+    if (now < dos_joystick_next_poll_ns) {
+        return;
+    }
+    dos_joystick_next_poll_ns = now + DOS_JOYSTICK_POLL_INTERVAL_NS;
+
     ReadGameportAxes(&axis_x, &axis_y);
 
     if (axis_x >= 0) {
@@ -269,14 +287,6 @@ static void DOS_JoystickUpdate(SDL_Joystick *joystick)
         Sint16 cal_y = CalibrateAxis(axis_y, hwdata, 1);
         SDL_SendJoystickAxis(0, joystick, 1, cal_y);
     }
-
-    /* Read buttons via BIOS INT 15h subfunction 0 for consistency,
-       but direct port read is fine for buttons (passive read, no timing) */
-    val = inportb(GAMEPORT);
-    SDL_SendJoystickButton(0, joystick, 0, !(val & 0x10));  /* button 1 */
-    SDL_SendJoystickButton(0, joystick, 1, !(val & 0x20));  /* button 2 */
-    SDL_SendJoystickButton(0, joystick, 2, !(val & 0x40));  /* button 3 */
-    SDL_SendJoystickButton(0, joystick, 3, !(val & 0x80));  /* button 4 */
 }
 
 static void DOS_JoystickClose(SDL_Joystick *joystick)
