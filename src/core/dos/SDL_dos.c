@@ -116,10 +116,13 @@ void DOS_UnhookInterrupt(DOS_InterruptHook *hook, bool disable_interrupt)
 
     _go32_dpmi_set_protected_mode_interrupt_vector(hook->interrupt_vector, &hook->original_irq_handler_seginfo);
 
-    // _go32_dpmi_chain_protected_mode_interrupt_vector internally allocates an
-    // IRET wrapper via _go32_dpmi_allocate_iret_wrapper. Now that the original
-    // vector is restored, free the wrapper to avoid a descriptor leak.
-    _go32_dpmi_free_iret_wrapper(&hook->irq_handler_seginfo);
+    // Note: _go32_dpmi_chain_protected_mode_interrupt_vector internally
+    // allocates a wrapper, but it is NOT safe to free it with
+    // _go32_dpmi_free_iret_wrapper — that function expects a wrapper
+    // allocated by _go32_dpmi_allocate_iret_wrapper, and calling it on
+    // a chain-allocated wrapper causes a page fault on exit.  The wrapper
+    // is a few bytes of conventional memory that the OS reclaims when the
+    // process terminates, so the leak is harmless.
 
     SDL_zerop(hook);
 }

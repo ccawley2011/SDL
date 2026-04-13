@@ -453,14 +453,16 @@ bool DOSVESA_UpdateWindowFramebuffer(SDL_VideoDevice *device, SDL_Window *window
         }
 
         if (vdata->page_flip_available) {
-            // Program the VGA DAC during the vertical retrace that the page
-            // flip waits for, so the new palette and new page appear together.
+            // Page-flip with optional vsync.
+            const int vsync_interval = windata->framebuffer_vsync;
             int back_page = 1 - vdata->current_page;
             Uint16 first_scanline = (Uint16)(vdata->page_offset[back_page] / mdata->pitch);
 
-            // Wait for vblank start before touching the DAC or flipping.
-            while (inportb(0x3DA) & 0x08) { SDL_CPUPauseInstruction(); }  // wait for non-vblank
-            while (!(inportb(0x3DA) & 0x08)) { SDL_CPUPauseInstruction(); }  // wait for vblank
+            if (vsync_interval > 0 || dac_needs_update) {
+                // Wait for vblank so the flip and DAC update appear together.
+                while (inportb(0x3DA) & 0x08) { SDL_CPUPauseInstruction(); }  // wait for non-vblank
+                while (!(inportb(0x3DA) & 0x08)) { SDL_CPUPauseInstruction(); }  // wait for vblank
+            }
 
             if (dac_needs_update) {
                 vdata->palette_version = dac_palette->version;
@@ -473,11 +475,12 @@ bool DOSVESA_UpdateWindowFramebuffer(SDL_VideoDevice *device, SDL_Window *window
             }
 
             // Flip: make the back page (which we just drew to) the visible page.
-            // Use subfunction 0x80 (set display start, don't wait) since we
-            // already waited for vblank above.
+            // Always use subfunction 0x0080 (set display start, don't wait) —
+            // vsync is controlled by our manual vblank wait above.
             __dpmi_regs regs;
+            SDL_zero(regs);
             regs.x.ax = 0x4F07;
-            regs.x.bx = 0x0080;  // set display start, no wait (we already synced)
+            regs.x.bx = 0x0080;
             regs.x.cx = 0;       // first pixel in scan line
             regs.x.dx = first_scanline;
             __dpmi_int(0x10, &regs);
