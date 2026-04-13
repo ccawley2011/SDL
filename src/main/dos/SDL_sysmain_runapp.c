@@ -20,6 +20,7 @@
 */
 
 #include "SDL_internal.h"
+#include "../SDL_main_callbacks.h"
 
 #ifdef SDL_PLATFORM_DOS
 
@@ -27,12 +28,13 @@
 
 // this locks .data, .bss, .text, and the stack. In SDL_RunApp(), we'll adjust this flag so future malloc() calls aren't locked by default.
 #include <crt0.h>
-int _crt0_startup_flags = _CRT0_FLAG_LOCK_MEMORY; // | _CRT_FLAG_NONMOVE_SBRK;
+int _crt0_startup_flags = _CRT0_FLAG_LOCK_MEMORY; // | _CRT0_FLAG_NONMOVE_SBRK;
 
 const char *SDL_argv0 = NULL;
 
 int SDL_RunApp(int argc, char *argv[], SDL_main_func mainFunction, void * reserved)
 {
+    (void)reserved;
     _crt0_startup_flags &= ~_CRT0_FLAG_LOCK_MEMORY;  // don't lock further allocations by default...so data, code, and stack are locked but not buffers from future malloc() calls.
 
     if (!__djgpp_nearptr_enable()) {
@@ -42,8 +44,7 @@ int SDL_RunApp(int argc, char *argv[], SDL_main_func mainFunction, void * reserv
 
     SDL_argv0 = argv ? argv[0] : NULL;
 
-    SDL_SetMainReady();
-    return mainFunction(argc, argv);
+    return SDL_CallMainFunction(argc, argv, mainFunction);
 }
 
 #endif

@@ -31,8 +31,6 @@
 #include "../../events/SDL_mouse_c.h"
 #include "../../events/default_cursor.h"
 
-static SDL_Cursor *global_cursor;
-
 // Create a cursor from a surface
 static SDL_Cursor *DOSVESA_CreateCursor(SDL_Surface *surface, int hot_x, int hot_y)
 {
@@ -52,7 +50,7 @@ static SDL_Cursor *DOSVESA_CreateCursor(SDL_Surface *surface, int hot_x, int hot
         return NULL;
     }
 
-    curdata->surface = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_ARGB8888);
+    curdata->surface = SDL_DuplicateSurface(surface);
     if (!curdata->surface) {
         SDL_free(curdata);
         SDL_free(cursor);
@@ -95,9 +93,6 @@ static void DOSVESA_FreeCursor(SDL_Cursor *cursor)
             SDL_free(cursor->internal);
         }
         SDL_free(cursor);
-        if (cursor == global_cursor) {
-            global_cursor = NULL;
-        }
     }
 }
 
@@ -167,6 +162,7 @@ void DOSVESA_InitMouse(SDL_VideoDevice *_this)
 void DOSVESA_QuitMouse(SDL_VideoDevice *_this)
 {
     SDL_Mouse *mouse = SDL_GetMouse();
+    SDL_free(mouse->internal);
     mouse->internal = NULL;
 }
 

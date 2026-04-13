@@ -116,7 +116,7 @@ static Sint16 CalibrateAxis(int raw, struct joystick_hwdata *hwdata, int axis)
 
     /* Map to -32768..32767 */
     centered = raw - hwdata->axis_center[axis];
-    return (Sint16)SDL_clamp((centered * 65535) / range, -32768, 32767);
+    return (Sint16)SDL_clamp(((Sint64)centered * 65535) / range, -32768, 32767);
 }
 
 static bool DOS_JoystickInit(void)

@@ -252,6 +252,22 @@ static void BankedFramebufferCopyRect(const SDL_DisplayModeData *mdata,
     }
 }
 
+static void WaitForVBlank(void)
+{
+    while (inportb(0x3DA) & 0x08) { SDL_CPUPauseInstruction(); }   // wait for non-vblank
+    while (!(inportb(0x3DA) & 0x08)) { SDL_CPUPauseInstruction(); } // wait for vblank
+}
+
+static void ProgramVGADAC(SDL_Palette *palette)
+{
+    outportb(0x3C8, 0);
+    for (int i = 0; i < palette->ncolors && i < 256; i++) {
+        outportb(0x3C9, palette->colors[i].r >> 2);
+        outportb(0x3C9, palette->colors[i].g >> 2);
+        outportb(0x3C9, palette->colors[i].b >> 2);
+    }
+}
+
 bool DOSVESA_UpdateWindowFramebuffer(SDL_VideoDevice *device, SDL_Window *window, const SDL_Rect *rects, int numrects)
 {
     SDL_VideoData *vdata = device->internal;
@@ -320,8 +336,8 @@ bool DOSVESA_UpdateWindowFramebuffer(SDL_VideoDevice *device, SDL_Window *window
         if (mouse && mouse->internal && !mouse->relative_mode && mouse->cursor_visible && mouse->cur_cursor && mouse->cur_cursor->internal) {
             cursor = mouse->cur_cursor->internal->surface;
             if (cursor) {
-                cursorrect.x = SDL_clamp((int) mouse->x, 0, window->w);
-                cursorrect.y = SDL_clamp((int) mouse->y, 0, window->h);
+                cursorrect.x = SDL_clamp((int) mouse->x, 0, window->w) - mouse->cur_cursor->internal->hot_x;
+                cursorrect.y = SDL_clamp((int) mouse->y, 0, window->h) - mouse->cur_cursor->internal->hot_y;
                 cursorrect.w = cursor->w;
                 cursorrect.h = cursor->h;
 
@@ -356,18 +372,12 @@ bool DOSVESA_UpdateWindowFramebuffer(SDL_VideoDevice *device, SDL_Window *window
         // Wait for vsync before the copy to reduce tearing.
         const int vsync_interval = windata->framebuffer_vsync;
         if (vsync_interval > 0 || dac_needs_update) {
-            while (inportb(0x3DA) & 0x08) { SDL_CPUPauseInstruction(); }  // wait for non-vblank
-            while (!(inportb(0x3DA) & 0x08)) { SDL_CPUPauseInstruction(); }  // wait for vblank
+            WaitForVBlank();
         }
 
         if (dac_needs_update) {
             vdata->palette_version = dac_palette->version;
-            outportb(0x3C8, 0);
-            for (int i = 0; i < dac_palette->ncolors && i < 256; i++) {
-                outportb(0x3C9, dac_palette->colors[i].r >> 2);
-                outportb(0x3C9, dac_palette->colors[i].g >> 2);
-                outportb(0x3C9, dac_palette->colors[i].b >> 2);
-            }
+            ProgramVGADAC(dac_palette);
         }
 
         // Bank-switched copy of only the dirty rectangles.
@@ -436,8 +446,8 @@ bool DOSVESA_UpdateWindowFramebuffer(SDL_VideoDevice *device, SDL_Window *window
         if (mouse && mouse->internal && !mouse->relative_mode && mouse->cursor_visible && mouse->cur_cursor && mouse->cur_cursor->internal) {
             cursor = mouse->cur_cursor->internal->surface;
             if (cursor) {
-                cursorrect.x = dstrect.x + SDL_clamp((int) mouse->x, 0, window->w);
-                cursorrect.y = dstrect.y + SDL_clamp((int) mouse->y, 0, window->h);
+                cursorrect.x = dstrect.x + SDL_clamp((int) mouse->x, 0, window->w) - mouse->cur_cursor->internal->hot_x;
+                cursorrect.y = dstrect.y + SDL_clamp((int) mouse->y, 0, window->h) - mouse->cur_cursor->internal->hot_y;
             }
         }
 
@@ -460,18 +470,12 @@ bool DOSVESA_UpdateWindowFramebuffer(SDL_VideoDevice *device, SDL_Window *window
 
             if (vsync_interval > 0 || dac_needs_update) {
                 // Wait for vblank so the flip and DAC update appear together.
-                while (inportb(0x3DA) & 0x08) { SDL_CPUPauseInstruction(); }  // wait for non-vblank
-                while (!(inportb(0x3DA) & 0x08)) { SDL_CPUPauseInstruction(); }  // wait for vblank
+                WaitForVBlank();
             }
 
             if (dac_needs_update) {
                 vdata->palette_version = dac_palette->version;
-                outportb(0x3C8, 0);
-                for (int i = 0; i < dac_palette->ncolors && i < 256; i++) {
-                    outportb(0x3C9, dac_palette->colors[i].r >> 2);
-                    outportb(0x3C9, dac_palette->colors[i].g >> 2);
-                    outportb(0x3C9, dac_palette->colors[i].b >> 2);
-                }
+                ProgramVGADAC(dac_palette);
             }
 
             // Flip: make the back page (which we just drew to) the visible page.
@@ -494,18 +498,12 @@ bool DOSVESA_UpdateWindowFramebuffer(SDL_VideoDevice *device, SDL_Window *window
             // No page-flipping: wait for vsync, then update DAC atomically
             const int vsync_interval = windata->framebuffer_vsync;
             if (vsync_interval > 0 || dac_needs_update) {
-                while (inportb(0x3DA) & 0x08) { SDL_CPUPauseInstruction(); }  // wait for non-vblank
-                while (!(inportb(0x3DA) & 0x08)) { SDL_CPUPauseInstruction(); }  // wait for vblank
+                WaitForVBlank();
             }
 
             if (dac_needs_update) {
                 vdata->palette_version = dac_palette->version;
-                outportb(0x3C8, 0);
-                for (int i = 0; i < dac_palette->ncolors && i < 256; i++) {
-                    outportb(0x3C9, dac_palette->colors[i].r >> 2);
-                    outportb(0x3C9, dac_palette->colors[i].g >> 2);
-                    outportb(0x3C9, dac_palette->colors[i].b >> 2);
-                }
+                ProgramVGADAC(dac_palette);
             }
         }
     }

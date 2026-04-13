@@ -19,5 +19,10 @@
   3. This notice may not be removed or altered from any source distribution.
 */
 
+#ifndef SDL_systhread_c_h_
+#define SDL_systhread_c_h_
+
 /* DOS thread handle is an integer thread ID from the DOS scheduler */
 typedef int SYS_ThreadHandle;
+
+#endif /* SDL_systhread_c_h_ */

@@ -43,7 +43,7 @@ bool SDL_SYS_CreateThread(SDL_Thread *thread,
     /* Ensure the scheduler is initialized (idempotent) */
     DOS_SchedulerInit();
 
-    size_t stack_size = thread->stacksize ? thread->stacksize : 0;
+    size_t stack_size = thread->stacksize;
 
     int tid = DOS_CreateThread(ThreadEntry, thread, stack_size);
     if (tid < 0) {

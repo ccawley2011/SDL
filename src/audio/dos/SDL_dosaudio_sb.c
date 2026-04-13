@@ -57,14 +57,16 @@ static bool ReadSoundBlasterReady(void)
 static void WriteSoundBlasterDSP(const Uint8 val)
 {
     const int port = soundblaster_base_port + 0xC;
-    while (inportb(port) & (1<<7)) { /* spin until the DSP says it can accept a command. */ }
+    int timeout = 100000;
+    while ((inportb(port) & (1<<7)) && --timeout > 0) { /* spin until ready or timeout */ }
     outportb(port, val);
 }
 
 static Uint8 ReadSoundBlasterDSP(void)
 {
     const int query_port = soundblaster_base_port + 0xA;
-    while (!ReadSoundBlasterReady()) { /* spin until the DSP says it has a reply available. */ }
+    int timeout = 100000;
+    while (!ReadSoundBlasterReady() && --timeout > 0) { /* spin until ready or timeout */ }
     return (Uint8) inportb(query_port);
 }
 
@@ -80,7 +82,7 @@ static void SoundBlasterIRQHandler(void)  // this is wrapped in a thing that han
     soundblaster_irq_pending = true;
 
     inportb(isr_irq_ack_port);  // acknowledge the interrupt
-    DOS_EndOfInterrupt();
+    DOS_EndOfInterrupt(soundblaster_irq);
 }
 static void SoundBlasterIRQHandler_End(void) { }  // end-of-ISR label for memory locking
 
@@ -142,7 +144,7 @@ static bool DOSSOUNDBLASTER_OpenDevice(SDL_AudioDevice *device)
             soundblaster_version, soundblaster_version_minor, is_sb16 ? "SB16" : "pre-SB16");
 
     if (device->buffer_size > (32 * 1024)) {
-        return SDL_SetError("Buffer size is too large (choose smaller audio format and/or less sample frames");  // DMA buffer has to fit in 64K segment, so buffer_size has to be half that, as we double it.
+        return SDL_SetError("Buffer size is too large (choose smaller audio format and/or fewer sample frames)");  // DMA buffer has to fit in 64K segment, so buffer_size has to be half that, as we double it.
     }
 
     // Initialize all variables that we clean on shutdown
@@ -158,6 +160,11 @@ static bool DOSSOUNDBLASTER_OpenDevice(SDL_AudioDevice *device)
 
     // allocate conventional memory for the DMA buffer.
     hidden->dma_channel = is_sb16 ? soundblaster_highdma_channel : soundblaster_dma_channel;
+    if (hidden->dma_channel < 0) {
+        SDL_free(hidden);
+        return SDL_SetError("No %s DMA channel configured in BLASTER environment variable",
+                           is_sb16 ? "high (16-bit)" : "low (8-bit)");
+    }
     hidden->dma_buflen = device->buffer_size * 2;
     hidden->dma_buffer = (Uint8 *) DOS_AllocateDMAMemory(hidden->dma_buflen, &hidden->dma_seginfo);
     if (!hidden->dma_buffer) {
@@ -178,7 +185,8 @@ static bool DOSSOUNDBLASTER_OpenDevice(SDL_AudioDevice *device)
         const int dma_words = (hidden->dma_buflen / 2) - 1;
         outportb(0xD4, 0x04 | hidden->dma_channel);  // mask the DMA channel
         outportb(0xD6, 0x58 | (hidden->dma_channel - 4));  // mode: single, read, auto-init
-        outportb(0x8B, physical_page);  // page to transfer
+        static const int high_page_ports[] = { 0, 0, 0, 0, 0, 0x8B, 0x89, 0x8A };  // DMA page register ports for channels 5-7
+        outportb(high_page_ports[hidden->dma_channel], physical_page);  // page to transfer
         outportb(0xD8, 0x00);  // clear the flip-flop
         outportb(0xC0 + (hidden->dma_channel - 4) * 4, (Uint8) ((physical >> 1) & 0xFF));   // offset low (word address)
         outportb(0xC0 + (hidden->dma_channel - 4) * 4, (Uint8) ((physical >> 9) & 0xFF));   // offset high
@@ -209,10 +217,10 @@ static bool DOSSOUNDBLASTER_OpenDevice(SDL_AudioDevice *device)
 
     // Lock ISR code and data to prevent page faults during interrupts.
     // The ISR is minimal: just sets a flag and acknowledges the hardware.
-    _go32_dpmi_lock_code((void *)SoundBlasterIRQHandler,
-        (unsigned long)SoundBlasterIRQHandler_End - (unsigned long)SoundBlasterIRQHandler);
-    _go32_dpmi_lock_data((void *)&soundblaster_irq_pending, sizeof(soundblaster_irq_pending));
-    _go32_dpmi_lock_data((void *)&isr_irq_ack_port, sizeof(isr_irq_ack_port));
+    DOS_LockCode(SoundBlasterIRQHandler, SoundBlasterIRQHandler_End);
+    DOS_LockVariable(soundblaster_irq_pending);
+    DOS_LockVariable(isr_irq_ack_port);
+    DOS_LockVariable(soundblaster_irq);
 
     DOS_HookInterrupt(soundblaster_irq, SoundBlasterIRQHandler, &hidden->interrupt_hook);
 
@@ -288,12 +296,14 @@ static Uint8 *DOSSOUNDBLASTER_GetDeviceBuf(SDL_AudioDevice *device, int *buffer_
     int count;
     if (hidden->is_16bit) {
         // High DMA (16-bit, channels 5-7): ports in 0xC0+ range, counts in 16-bit words
+        outportb(0xD8, 0x00);  // clear byte flip-flop for high DMA
         count = (int) inportb(0xC0 + (hidden->dma_channel - 4) * 4 + 2);
         count += (int) inportb(0xC0 + (hidden->dma_channel - 4) * 4 + 2) << 8;
         // count is in words; halfdma is in bytes, so compare against halfdma/2
         return hidden->dma_buffer + (count < (halfdma / 2) ? 0 : halfdma);
     } else {
         // Low DMA (8-bit, channels 0-3): ports in 0x00+ range, counts in bytes
+        outportb(0x0C, 0x00);  // clear byte flip-flop for low DMA
         count = (int) inportb(hidden->dma_channel * 2 + 1);
         count += (int) inportb(hidden->dma_channel * 2 + 1) << 8;
         // count is in bytes; halfdma is in bytes, so compare directly
@@ -359,7 +369,7 @@ static bool CheckForSoundBlaster(void)
     if (!ready) {
         return SDL_SetError("No SoundBlaster detected on port 0x%X", soundblaster_base_port);  // either no SoundBlaster or it's on a different base port.
     } else if (ReadSoundBlasterDSP() != 0xAA) {
-        return SDL_SetError("Not a SoundBlaster at port 0x%X\n", soundblaster_base_port);  // either it's not a SoundBlaster or there's a problem.
+        return SDL_SetError("Not a SoundBlaster at port 0x%X", soundblaster_base_port);  // either it's not a SoundBlaster or there's a problem.
     }
     return true;
 }
@@ -383,7 +393,8 @@ static bool IsSoundBlasterPresent(void)
     while ((token = SDL_strtok_r(str, " ", &saveptr)) != NULL) {
         str = NULL;  // must be NULL for future calls to tokenize the same string.
         char *endp = NULL;
-        const int num = (int) SDL_strtol(token+1, &endp, 16);
+        const int base = (SDL_toupper(*token) == 'A') ? 16 : 10;
+        const int num = (int) SDL_strtol(token+1, &endp, base);
         if ((token[1] == 0) || (*endp != 0)) {  // bogus num
             continue;
         } else if (num < 0) {
@@ -417,7 +428,7 @@ static bool IsSoundBlasterPresent(void)
     }
     SDL_free(copy);
 
-    if (!soundblaster_base_port || !soundblaster_irq || (!soundblaster_dma_channel && !soundblaster_highdma_channel)) {
+    if (soundblaster_base_port < 0 || soundblaster_irq < 0 || (soundblaster_dma_channel < 0 && soundblaster_highdma_channel < 0)) {
         return SDL_SetError("BLASTER environment variable is incomplete or incorrect");
     } else if (!CheckForSoundBlaster()) {
         return false;

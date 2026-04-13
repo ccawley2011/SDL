@@ -25,7 +25,6 @@
 
 #include "SDL_dos.h"
 #include "SDL_dos_scheduler.h"
-#include <string.h>
 #include <setjmp.h>
 
 /* DJGPP's jmp_buf is defined as:
@@ -98,6 +97,7 @@ void DOS_SchedulerQuit(void)
     // Clean up any remaining threads
     for (int i = 1; i < DOS_MAX_THREADS; i++) {
         if (threads[i].state != DOS_THREAD_FREE) {
+            SDL_assert(threads[i].state == DOS_THREAD_FINISHED);
             DOS_DestroyThread(i);
         }
     }
@@ -172,10 +172,7 @@ int DOS_CreateThread(int (*fn)(void *), void *arg, size_t stack_size)
         ctx->env[0].__ebp = (unsigned long)(uintptr_t)stack_top;
         ctx->env[0].__eip = (unsigned long)(uintptr_t)ThreadTrampoline;
     } else {
-        // We land here when this thread is scheduled for the first time.
-        // But actually, with the patched EIP approach, we land in
-        // ThreadTrampoline() instead — this else branch is never reached
-        // when using the EIP patching method.
+        SDL_assert(!"Unreachable");
     }
 
     return tid;

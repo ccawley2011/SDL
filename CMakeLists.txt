@@ -3351,7 +3351,8 @@ elseif(DOS)
   sdl_glob_sources("${SDL3_SOURCE_DIR}/src/filesystem/dos/*.c")
   set(HAVE_SDL_FILESYSTEM TRUE)
 
-  # !!! FIXME
+  # Wall-clock time (SDL_GetDateTimeLocalized etc.) reuses the Unix implementation;
+  # DJGPP provides gettimeofday/localtime so this works as-is.
   set(SDL_TIME_UNIX 1)
   sdl_glob_sources("${SDL3_SOURCE_DIR}/src/time/unix/*.c")
   set(HAVE_SDL_TIME TRUE)

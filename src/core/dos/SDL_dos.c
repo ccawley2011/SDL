@@ -27,7 +27,7 @@
 void *DOS_AllocateConventionalMemory(const int len, _go32_dpmi_seginfo *seginfo)
 {
     seginfo->size = (len + 15) / 16;  // this is in "paragraphs"
-	if (_go32_dpmi_allocate_dos_memory(seginfo) != 0) {
+    if (_go32_dpmi_allocate_dos_memory(seginfo) != 0) {
         SDL_OutOfMemory();
         return NULL;
     }
@@ -88,7 +88,7 @@ char *DOS_GetFarPtrCString(const Uint32 segoffset)
 
 void DOS_HookInterrupt(int irq, DOS_InterruptHookFn fn, DOS_InterruptHook *hook)
 {
-    SDL_assert(irq > 0);
+    SDL_assert(irq >= 0 && irq <= 15);
     SDL_assert(fn != NULL);
     SDL_assert(hook != NULL);
     hook->fn = fn;
@@ -98,7 +98,14 @@ void DOS_HookInterrupt(int irq, DOS_InterruptHookFn fn, DOS_InterruptHook *hook)
     hook->irq_handler_seginfo.pm_offset = (uint32_t) fn;
     _go32_dpmi_get_protected_mode_interrupt_vector(hook->interrupt_vector, &hook->original_irq_handler_seginfo);
     _go32_dpmi_chain_protected_mode_interrupt_vector(hook->interrupt_vector, &hook->irq_handler_seginfo);
-    outportb(0x21, inportb(0x21) & (~(1<<irq)));  // enable interrupt
+
+    // enable interrupt on the correct PIC
+    if (irq > 7) {
+        outportb(0xA1, inportb(0xA1) & ~(1 << (irq - 8)));  // unmask on slave PIC
+        outportb(0x21, inportb(0x21) & ~(1 << 2));           // ensure cascade (IRQ2) is unmasked
+    } else {
+        outportb(0x21, inportb(0x21) & ~(1 << irq));         // unmask on master PIC
+    }
 }
 
 void DOS_UnhookInterrupt(DOS_InterruptHook *hook, bool disable_interrupt)
@@ -111,7 +118,11 @@ void DOS_UnhookInterrupt(DOS_InterruptHook *hook, bool disable_interrupt)
     SDL_assert(hook->irq > 0);
 
     if (disable_interrupt) {
-        outportb( 0x21, inportb(0x21) | (1 << hook->irq) );
+        if (hook->irq > 7) {
+            outportb(0xA1, inportb(0xA1) | (1 << (hook->irq - 8)));  // mask on slave PIC
+        } else {
+            outportb(0x21, inportb(0x21) | (1 << hook->irq));        // mask on master PIC
+        }
     }
 
     _go32_dpmi_set_protected_mode_interrupt_vector(hook->interrupt_vector, &hook->original_irq_handler_seginfo);

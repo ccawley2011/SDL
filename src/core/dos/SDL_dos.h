@@ -104,9 +104,12 @@ SDL_FORCE_INLINE Uint32 DOS_PeekUint32(const Uint32 segoffset)
     return (Uint32) _farpeekl(_dos_ds, ((segoffset & 0xFFFF0000) >> 12) + (segoffset & 0xFFFF));
 }
 
-SDL_FORCE_INLINE void DOS_EndOfInterrupt(void)
+SDL_FORCE_INLINE void DOS_EndOfInterrupt(int irq)
 {
-    outportb(0x20, 0x20);  // Send EOI to Programmable Interrupt Controller.
+    if (irq > 7) {
+        outportb(0xA0, 0x20);  // Send EOI to slave PIC (PIC2) for IRQs 8-15
+    }
+    outportb(0x20, 0x20);  // Send EOI to master PIC (PIC1) — always needed (cascade)
 }
 
 // Allocate memory under the 640k line; various real mode services and DMA transfers need this.
@@ -131,7 +134,7 @@ typedef struct DOS_InterruptHook
     int interrupt_vector;  // this is the _vector_ number, not the IRQ number!
     _go32_dpmi_seginfo irq_handler_seginfo;
     _go32_dpmi_seginfo original_irq_handler_seginfo;
-    bool installed;
+
 } DOS_InterruptHook;
 
 void DOS_HookInterrupt(int irq, DOS_InterruptHookFn fn, DOS_InterruptHook *hook);  // `irq` is the IRQ number, not the interrupt vector number!

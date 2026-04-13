@@ -324,18 +324,19 @@ static void KeyboardIRQHandler(void)  // this is wrapped in a thing that handles
 {
     keyevents_ringbuffer[keyevents_head] = inportb(0x60);
     keyevents_head = (keyevents_head + 1) & (SDL_arraysize(keyevents_ringbuffer) - 1);
-    DOS_EndOfInterrupt();
+    DOS_EndOfInterrupt(1);
 }
+static void KeyboardIRQHandler_End(void) { }  // end-of-ISR label for memory locking
 
 void DOSVESA_InitKeyboard(SDL_VideoDevice *device)
 {
     SDL_VideoData *data = device->internal;
 
     // Lock ISR code and data to prevent page faults during interrupts
-    _go32_dpmi_lock_code((void *)KeyboardIRQHandler, (unsigned long)DOSVESA_InitKeyboard - (unsigned long)KeyboardIRQHandler);
-    _go32_dpmi_lock_data((void *)keyevents_ringbuffer, sizeof(keyevents_ringbuffer));
-    _go32_dpmi_lock_data((void *)&keyevents_head, sizeof(keyevents_head));
-    _go32_dpmi_lock_data((void *)&keyevents_tail, sizeof(keyevents_tail));
+    DOS_LockCode(KeyboardIRQHandler, KeyboardIRQHandler_End);
+    DOS_LockVariable(keyevents_ringbuffer);
+    DOS_LockVariable(keyevents_head);
+    DOS_LockVariable(keyevents_tail);
 
     DOS_HookInterrupt(1, KeyboardIRQHandler, &data->keyboard_interrupt_hook);
 }
