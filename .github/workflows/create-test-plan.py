@@ -829,7 +829,7 @@ def spec_to_job(spec: JobSpec, key: str, trackmem_symbol_names: bool, ctest_args
             job.apt_packages = ["ccache", "libfl-dev"]  # djgpp needs libfl.so.2
             job.cmake_build_type = "Release"
             job.setup_ninja = True
-            job.static_lib = StaticLibType.STATIC_LIB
+            job.static_lib = StaticLibType.A
             job.shared_lib = None
             job.clang_tidy = False
             job.werror = False  # FIXME: enable SDL_WERROR

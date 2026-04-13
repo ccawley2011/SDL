@@ -1,6 +1,17 @@
 set(CMAKE_SYSTEM_NAME DOS)
 
 set(DJGPP TRUE)
+
+# CMake's Platform/DOS.cmake assumes OpenWatcom naming conventions (no prefix,
+# .lib suffix).  DJGPP uses standard Unix/GCC conventions for its system
+# libraries (lib prefix, .a suffix — e.g. libm.a), so we override the platform
+# defaults via CMAKE_USER_MAKE_RULES_OVERRIDE, which runs *after* the platform
+# module has set its defaults, giving us the final say on these variables.
+# The path must be cached because CMake re-parses the toolchain file during
+# try_compile, where CMAKE_CURRENT_LIST_DIR may point elsewhere.
+set(DJGPP_PLATFORM_OVERRIDES "${CMAKE_CURRENT_LIST_DIR}/djgpp-platform-overrides.cmake" CACHE FILEPATH "" FORCE)
+set(CMAKE_USER_MAKE_RULES_OVERRIDE "${DJGPP_PLATFORM_OVERRIDES}")
+
 set(CMAKE_STATIC_LIBRARY_PREFIX "lib")
 set(CMAKE_STATIC_LIBRARY_SUFFIX ".a")
 set(CMAKE_SHARED_LIBRARY_PREFIX "")
@@ -8,7 +19,7 @@ set(CMAKE_SHARED_LIBRARY_SUFFIX ".dll")
 set(CMAKE_IMPORT_LIBRARY_PREFIX "lib")
 set(CMAKE_IMPORT_LIBRARY_SUFFIX ".a")
 set(CMAKE_EXECUTABLE_SUFFIX ".exe")
-set(CMAKE_LINK_LIBRARY_SUFFIX ".lib")
+set(CMAKE_LINK_LIBRARY_SUFFIX "")
 set(CMAKE_DL_LIBS "")
 
 set(CMAKE_FIND_LIBRARY_PREFIXES "lib")
