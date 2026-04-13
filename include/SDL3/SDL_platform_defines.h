@@ -489,7 +489,7 @@
 /**
  * A preprocessor macro that is only defined if compiling for MS-DOS.
  *
- * \since This macro is available since SDL 3.4.0.
+ * \since This macro is available since SDL 3.6.0.
  */
 #define SDL_PLATFORM_DOS 1
 #endif
