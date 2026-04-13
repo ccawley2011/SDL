@@ -478,11 +478,12 @@ SDL_PropertiesID SDL_GetAudioStreamProperties(SDL_AudioStream *stream)
         SDL_InvalidParamError("stream");
         return 0;
     }
-    LockAudioStream(stream);
+
+    SDL_LockMutex(stream->lock);
     if (stream->props == 0) {
         stream->props = SDL_CreateProperties();
     }
-    UnlockAudioStream(stream);
+    SDL_UnlockMutex(stream->lock);
     return stream->props;
 }
 
@@ -491,10 +492,11 @@ bool SDL_SetAudioStreamGetCallback(SDL_AudioStream *stream, SDL_AudioStreamCallb
     CHECK_PARAM(!stream) {
         return SDL_InvalidParamError("stream");
     }
-    LockAudioStream(stream);
+
+    SDL_LockMutex(stream->lock);
     stream->get_callback = callback;
     stream->get_callback_userdata = userdata;
-    UnlockAudioStream(stream);
+    SDL_UnlockMutex(stream->lock);
     return true;
 }
 
@@ -503,16 +505,12 @@ bool SDL_SetAudioStreamPutCallback(SDL_AudioStream *stream, SDL_AudioStreamCallb
     CHECK_PARAM(!stream) {
         return SDL_InvalidParamError("stream");
     }
-    LockAudioStream(stream);
+
+    SDL_LockMutex(stream->lock);
     stream->put_callback = callback;
     stream->put_callback_userdata = userdata;
-    UnlockAudioStream(stream);
+    SDL_UnlockMutex(stream->lock);
     return true;
-}
-
-void LockAudioStream(SDL_AudioStream *stream)
-{
-    SDL_LockMutex(stream->lock);
 }
 
 bool SDL_LockAudioStream(SDL_AudioStream *stream)
@@ -520,13 +518,9 @@ bool SDL_LockAudioStream(SDL_AudioStream *stream)
     CHECK_PARAM(!stream) {
         return SDL_InvalidParamError("stream");
     }
-    LockAudioStream(stream);
-    return true;
-}
 
-void UnlockAudioStream(SDL_AudioStream *stream)
-{
-    SDL_UnlockMutex(stream->lock);
+    SDL_LockMutex(stream->lock);
+    return true;
 }
 
 bool SDL_UnlockAudioStream(SDL_AudioStream *stream)
@@ -534,7 +528,8 @@ bool SDL_UnlockAudioStream(SDL_AudioStream *stream)
     CHECK_PARAM(!stream) {
         return SDL_InvalidParamError("stream");
     }
-    UnlockAudioStream(stream);
+
+    SDL_UnlockMutex(stream->lock);
     return true;
 }
 
@@ -550,14 +545,14 @@ bool SDL_GetAudioStreamFormat(SDL_AudioStream *stream, SDL_AudioSpec *src_spec, 
         return SDL_InvalidParamError("stream");
     }
 
-    LockAudioStream(stream);
+    SDL_LockMutex(stream->lock);
     if (src_spec) {
         SDL_copyp(src_spec, &stream->src_spec);
     }
     if (dst_spec) {
         SDL_copyp(dst_spec, &stream->dst_spec);
     }
-    UnlockAudioStream(stream);
+    SDL_UnlockMutex(stream->lock);
 
     if (src_spec && src_spec->format == 0) {
         return SDL_SetError("Stream has no source format");
@@ -602,7 +597,7 @@ bool SDL_SetAudioStreamFormat(SDL_AudioStream *stream, const SDL_AudioSpec *src_
         }
     }
 
-    LockAudioStream(stream);
+    SDL_LockMutex(stream->lock);
 
     // quietly refuse to change the format of the end currently bound to a device.
     if (stream->bound_device) {
@@ -629,7 +624,7 @@ bool SDL_SetAudioStreamFormat(SDL_AudioStream *stream, const SDL_AudioSpec *src_
         SDL_copyp(&stream->dst_spec, dst_spec);
     }
 
-    UnlockAudioStream(stream);
+    SDL_UnlockMutex(stream->lock);
 
     return true;
 }
@@ -642,7 +637,7 @@ bool SetAudioStreamChannelMap(SDL_AudioStream *stream, const SDL_AudioSpec *spec
 
     bool result = true;
 
-    LockAudioStream(stream);
+    SDL_LockMutex(stream->lock);
 
     if (channels != spec->channels) {
         result = SDL_SetError("Wrong number of channels");
@@ -670,7 +665,7 @@ bool SetAudioStreamChannelMap(SDL_AudioStream *stream, const SDL_AudioSpec *spec
         }
     }
 
-    UnlockAudioStream(stream);
+    SDL_UnlockMutex(stream->lock);
     return result;
 }
 
@@ -689,10 +684,10 @@ int *SDL_GetAudioStreamInputChannelMap(SDL_AudioStream *stream, int *count)
     int *result = NULL;
     int channels = 0;
     if (stream) {
-        LockAudioStream(stream);
+        SDL_LockMutex(stream->lock);
         channels = stream->src_spec.channels;
         result = SDL_ChannelMapDup(stream->src_chmap, channels);
-        UnlockAudioStream(stream);
+        SDL_UnlockMutex(stream->lock);
     }
 
     if (count) {
@@ -707,10 +702,10 @@ int *SDL_GetAudioStreamOutputChannelMap(SDL_AudioStream *stream, int *count)
     int *result = NULL;
     int channels = 0;
     if (stream) {
-        LockAudioStream(stream);
+        SDL_LockMutex(stream->lock);
         channels = stream->dst_spec.channels;
         result = SDL_ChannelMapDup(stream->dst_chmap, channels);
-        UnlockAudioStream(stream);
+        SDL_UnlockMutex(stream->lock);
     }
 
     if (count) {
@@ -727,9 +722,9 @@ float SDL_GetAudioStreamFrequencyRatio(SDL_AudioStream *stream)
         return 0.0f;
     }
 
-    LockAudioStream(stream);
+    SDL_LockMutex(stream->lock);
     const float freq_ratio = stream->freq_ratio;
-    UnlockAudioStream(stream);
+    SDL_UnlockMutex(stream->lock);
 
     return freq_ratio;
 }
@@ -750,9 +745,9 @@ bool SDL_SetAudioStreamFrequencyRatio(SDL_AudioStream *stream, float freq_ratio)
         return SDL_SetError("Frequency ratio is too high");
     }
 
-    LockAudioStream(stream);
+    SDL_LockMutex(stream->lock);
     stream->freq_ratio = freq_ratio;
-    UnlockAudioStream(stream);
+    SDL_UnlockMutex(stream->lock);
 
     return true;
 }
@@ -764,9 +759,9 @@ float SDL_GetAudioStreamGain(SDL_AudioStream *stream)
         return -1.0f;
     }
 
-    LockAudioStream(stream);
+    SDL_LockMutex(stream->lock);
     const float gain = stream->gain;
-    UnlockAudioStream(stream);
+    SDL_UnlockMutex(stream->lock);
 
     return gain;
 }
@@ -780,9 +775,9 @@ bool SDL_SetAudioStreamGain(SDL_AudioStream *stream, float gain)
         return SDL_InvalidParamError("gain");
     }
 
-    LockAudioStream(stream);
+    SDL_LockMutex(stream->lock);
     stream->gain = gain;
-    UnlockAudioStream(stream);
+    SDL_UnlockMutex(stream->lock);
 
     return true;
 }
@@ -836,21 +831,21 @@ static bool PutAudioStreamBuffer(SDL_AudioStream *stream, const void *buf, int l
     SDL_Log("AUDIOSTREAM: wants to put %d bytes", len);
 #endif
 
-    LockAudioStream(stream);
+    SDL_LockMutex(stream->lock);
 
     if (!CheckAudioStreamIsFullySetup(stream)) {
-        UnlockAudioStream(stream);
+        SDL_UnlockMutex(stream->lock);
         return false;
     }
 
     if ((len % SDL_AUDIO_FRAMESIZE(stream->src_spec)) != 0) {
-        UnlockAudioStream(stream);
+        SDL_UnlockMutex(stream->lock);
         return SDL_SetError("Can't add partial sample frames");
     }
 
     const bool retval = PutAudioStreamBufferInternal(stream, &stream->src_spec, stream->src_chmap, buf, len, callback, userdata);
 
-    UnlockAudioStream(stream);
+    SDL_UnlockMutex(stream->lock);
 
     return retval;
 }
@@ -1003,9 +998,9 @@ bool SDL_PutAudioStreamPlanarData(SDL_AudioStream *stream, const void * const *c
     SDL_AudioSpec spec;
     int chmap_copy[SDL_MAX_CHANNELMAP_CHANNELS];
     int *chmap = NULL;
-    LockAudioStream(stream);
+    SDL_LockMutex(stream->lock);
     if (!CheckAudioStreamIsFullySetup(stream)) {
-        UnlockAudioStream(stream);
+        SDL_UnlockMutex(stream->lock);
         return false;
     }
     SDL_copyp(&spec, &stream->src_spec);
@@ -1013,7 +1008,7 @@ bool SDL_PutAudioStreamPlanarData(SDL_AudioStream *stream, const void * const *c
         chmap = chmap_copy;
         SDL_memcpy(chmap, stream->src_chmap, sizeof (*chmap) * spec.channels);
     }
-    UnlockAudioStream(stream);
+    SDL_UnlockMutex(stream->lock);
 
     if (spec.channels == 1) {  // nothing to interleave, just use the usual function.
         return SDL_PutAudioStreamData(stream, channel_buffers[0], SDL_AUDIO_FRAMESIZE(spec) * num_samples);
@@ -1048,9 +1043,9 @@ bool SDL_PutAudioStreamPlanarData(SDL_AudioStream *stream, const void * const *c
     //  and set up a new track with the right format, and the next SDL_PutAudioStreamData will notice that stream->src_spec doesn't
     //  match the new track and set up a new one again. It's a bad idea to change the format on another thread while putting here,
     //  but everything _will_ work out with the format that was (presumably) expected.
-    LockAudioStream(stream);
+    SDL_LockMutex(stream->lock);
     retval = PutAudioStreamBufferInternal(stream, &spec, chmap, data, len, callback, NULL);
-    UnlockAudioStream(stream);
+    SDL_UnlockMutex(stream->lock);
 
     return retval;
 }
@@ -1088,9 +1083,9 @@ bool SDL_FlushAudioStream(SDL_AudioStream *stream)
         return SDL_InvalidParamError("stream");
     }
 
-    LockAudioStream(stream);
+    SDL_LockMutex(stream->lock);
     SDL_FlushAudioQueue(stream->queue);
-    UnlockAudioStream(stream);
+    SDL_UnlockMutex(stream->lock);
 
     return true;
 }
@@ -1364,10 +1359,10 @@ int SDL_GetAudioStreamDataAdjustGain(SDL_AudioStream *stream, void *voidbuf, int
         return 0; // nothing to do.
     }
 
-    LockAudioStream(stream);
+    SDL_LockMutex(stream->lock);
 
     if (!CheckAudioStreamIsFullySetup(stream)) {
-        UnlockAudioStream(stream);
+        SDL_UnlockMutex(stream->lock);
         return -1;
     }
 
@@ -1441,7 +1436,7 @@ int SDL_GetAudioStreamDataAdjustGain(SDL_AudioStream *stream, void *voidbuf, int
         total += output_frames * dst_frame_size;
     }
 
-    UnlockAudioStream(stream);
+    SDL_UnlockMutex(stream->lock);
 
 #if DEBUG_AUDIOSTREAM
     SDL_Log("AUDIOSTREAM: Final result was %d", total);
@@ -1463,10 +1458,10 @@ int SDL_GetAudioStreamAvailable(SDL_AudioStream *stream)
         return -1;
     }
 
-    LockAudioStream(stream);
+    SDL_LockMutex(stream->lock);
 
     if (!CheckAudioStreamIsFullySetup(stream)) {
-        UnlockAudioStream(stream);
+        SDL_UnlockMutex(stream->lock);
         return 0;
     }
 
@@ -1475,7 +1470,7 @@ int SDL_GetAudioStreamAvailable(SDL_AudioStream *stream)
     // convert from sample frames to bytes in destination format.
     count *= SDL_AUDIO_FRAMESIZE(stream->dst_spec);
 
-    UnlockAudioStream(stream);
+    SDL_UnlockMutex(stream->lock);
 
     // if this overflows an int, just clamp it to a maximum.
     return (int) SDL_min(count, SDL_INT_MAX);
@@ -1489,11 +1484,11 @@ int SDL_GetAudioStreamQueued(SDL_AudioStream *stream)
         return -1;
     }
 
-    LockAudioStream(stream);
+    SDL_LockMutex(stream->lock);
 
     size_t total = SDL_GetAudioQueueQueued(stream->queue);
 
-    UnlockAudioStream(stream);
+    SDL_UnlockMutex(stream->lock);
 
     // if this overflows an int, just clamp it to a maximum.
     return (int) SDL_min(total, SDL_INT_MAX);
@@ -1505,14 +1500,14 @@ bool SDL_ClearAudioStream(SDL_AudioStream *stream)
         return SDL_InvalidParamError("stream");
     }
 
-    LockAudioStream(stream);
+    SDL_LockMutex(stream->lock);
 
     SDL_ClearAudioQueue(stream->queue);
     SDL_zero(stream->input_spec);
     stream->input_chmap = NULL;
     stream->resample_offset = 0;
 
-    UnlockAudioStream(stream);
+    SDL_UnlockMutex(stream->lock);
     return true;
 }
 

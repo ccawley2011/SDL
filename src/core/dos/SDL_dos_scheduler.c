@@ -42,12 +42,6 @@
 static DOS_ThreadContext threads[DOS_MAX_THREADS];
 static int current_thread = 0;  // Index of currently running thread
 static bool scheduler_initialized = false;
-static DOS_YieldCallback yield_callback = NULL;
-
-void DOS_SetYieldCallback(DOS_YieldCallback cb)
-{
-    yield_callback = cb;
-}
 
 // Find the next runnable thread using round-robin scheduling.
 // Returns thread ID, or -1 if no other thread is runnable.
@@ -191,14 +185,6 @@ void DOS_Yield(void)
 {
     if (!scheduler_initialized) {
         return;
-    }
-
-    // Pump audio (or any other registered callback) on every yield,
-    // regardless of whether a context switch occurs.  This keeps audio
-    // smooth even when the calling thread is the only runnable one
-    // (e.g. the load thread yielding via SDL_Delay).
-    if (yield_callback) {
-        yield_callback();
     }
 
     int next = FindNextRunnable(current_thread);

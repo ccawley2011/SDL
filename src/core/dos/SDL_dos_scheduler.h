@@ -98,14 +98,6 @@ void DOS_BlockCurrentThread(void);
 // Destroy a thread's resources (stack, etc). Thread must be FINISHED or FREE.
 void DOS_DestroyThread(int thread_id);
 
-// Register a callback that is invoked on every DOS_Yield() call, regardless
-// of whether a context switch actually occurs.  This is used by the SB16
-// audio driver to pump audio mixing at every cooperative yield point so that
-// audio stays smooth even when no thread is calling DOSVESA_PumpEvents().
-// Only one callback is supported (set to NULL to unregister).
-typedef void (*DOS_YieldCallback)(void);
-void DOS_SetYieldCallback(DOS_YieldCallback cb);
-
 #ifdef __cplusplus
 }
 #endif

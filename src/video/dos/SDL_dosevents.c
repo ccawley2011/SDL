@@ -29,9 +29,6 @@
 #include "../SDL_sysvideo.h"
 #include "SDL_dosvideo.h"
 
-#ifdef SDL_AUDIO_DRIVER_DOS_SOUNDBLASTER
-#include "../../audio/dos/SDL_dosaudio_sb.h"
-#endif
 #include "../../core/dos/SDL_dos_scheduler.h"
 #include "SDL_dosevents_c.h"
 
@@ -242,12 +239,10 @@ static int keyevents_tail = 0;
 
 void DOSVESA_PumpEvents(SDL_VideoDevice *device)
 {
-#ifdef SDL_AUDIO_DRIVER_DOS_SOUNDBLASTER
-    SDL_DOS_PumpAudio();
-#endif
-
-    /* Give cooperative threads a chance to run (e.g. loading threads).
-       This is the primary yield point in the main game loop. */
+    /* Give cooperative threads a chance to run.  Audio mixing now runs
+       in its own cooperative thread (via SDL's normal audio thread),
+       so it will execute during this yield along with loading threads
+       and anything else that is runnable. */
     DOS_Yield();
 
     static bool is_extended = false;

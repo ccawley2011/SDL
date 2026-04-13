@@ -23,6 +23,8 @@
 #ifdef SDL_AUDIO_DRIVER_DOS_SOUNDBLASTER
 
 #include "SDL_dosaudio_sb.h"
+#include "../../core/dos/SDL_dos.h"
+#include "../../core/dos/SDL_dos_scheduler.h"
 
 // Set to 1 to force 8-bit mono (pre-SB16) code path even on SB16 hardware.
 // Useful for testing in DOSBox which always emulates an SB16 (DSP 4.x).
@@ -66,8 +68,6 @@ static Uint8 ReadSoundBlasterDSP(void)
     return (Uint8) inportb(query_port);
 }
 
-
-static SDL_AudioDevice *opened_soundblaster_device = NULL;
 static volatile bool soundblaster_irq_pending = false;
 
 // ISR-cached copies of device state (avoids chasing heap pointers in IRQ context).
@@ -75,31 +75,32 @@ static volatile int isr_irq_ack_port = 0;
 
 static void SoundBlasterIRQHandler(void)  // this is wrapped in a thing that handles IRET, etc.
 {
-    // Set flag and acknowledge hardware. The actual mixing happens in
-    // SDL_DOS_PumpAudio() called from the main loop.
+    // Set flag and acknowledge hardware.  The actual mixing happens in
+    // SDL's audio thread via DOSSOUNDBLASTER_WaitDevice / DOS_Yield.
     soundblaster_irq_pending = true;
 
     inportb(isr_irq_ack_port);  // acknowledge the interrupt
     DOS_EndOfInterrupt();
 }
+static void SoundBlasterIRQHandler_End(void) { }  // end-of-ISR label for memory locking
 
-// Called from the main loop (via DOSVESA_PumpEvents → SDL_DOS_PumpAudio) to
-// run the audio mixing pipeline in normal (non-IRQ) context.
-void SDL_DOS_PumpAudio(void)
+// Block until the SB16 ISR signals that the DMA buffer needs refilling.
+// Called from SDL's audio thread (PlaybackAudioThread) between iterations.
+static bool DOSSOUNDBLASTER_WaitDevice(SDL_AudioDevice *device)
 {
-    if (!opened_soundblaster_device) {
-        return;
+    // Yield in a loop until the hardware interrupt sets the pending flag.
+    // Each DOS_Yield() gives the main thread (and any other cooperative
+    // threads) a chance to run, so the game keeps processing input and
+    // rendering while we wait for the next DMA cycle (~23 ms at 44100 Hz).
+    while (!soundblaster_irq_pending) {
+        DOS_Yield();
     }
 
-    // Check-and-clear atomically w.r.t. the IRQ by bracketing with cli/sti.
     DOS_DisableInterrupts();
-    const bool pending = soundblaster_irq_pending;
     soundblaster_irq_pending = false;
     DOS_EnableInterrupts();
 
-    if (pending) {
-        SDL_PlaybackAudioThreadIterate(opened_soundblaster_device);
-    }
+    return true;
 }
 
 
@@ -209,7 +210,7 @@ static bool DOSSOUNDBLASTER_OpenDevice(SDL_AudioDevice *device)
     // Lock ISR code and data to prevent page faults during interrupts.
     // The ISR is minimal: just sets a flag and acknowledges the hardware.
     _go32_dpmi_lock_code((void *)SoundBlasterIRQHandler,
-        (unsigned long)SDL_DOS_PumpAudio - (unsigned long)SoundBlasterIRQHandler);
+        (unsigned long)SoundBlasterIRQHandler_End - (unsigned long)SoundBlasterIRQHandler);
     _go32_dpmi_lock_data((void *)&soundblaster_irq_pending, sizeof(soundblaster_irq_pending));
     _go32_dpmi_lock_data((void *)&isr_irq_ack_port, sizeof(isr_irq_ack_port));
 
@@ -274,8 +275,6 @@ static bool DOSSOUNDBLASTER_OpenDevice(SDL_AudioDevice *device)
         WriteSoundBlasterDSP(0x1C);  // 8-bit auto-init DMA playback
     }
 
-    opened_soundblaster_device = device;
-
     SDL_Log("SoundBlaster opened!");
     return true;
 }
@@ -338,7 +337,6 @@ static void DOSSOUNDBLASTER_CloseDevice(SDL_AudioDevice *device)
 
         soundblaster_irq_pending = false;
         isr_irq_ack_port = 0;
-        opened_soundblaster_device = NULL;
 
         SDL_free(hidden);
     }
@@ -449,17 +447,10 @@ static bool DOSSOUNDBLASTER_Init(SDL_AudioDriverImpl *impl)
     }
 
     impl->OpenDevice = DOSSOUNDBLASTER_OpenDevice;
+    impl->WaitDevice = DOSSOUNDBLASTER_WaitDevice;
     impl->GetDeviceBuf = DOSSOUNDBLASTER_GetDeviceBuf;
     impl->CloseDevice = DOSSOUNDBLASTER_CloseDevice;
 
-    // !!! FIXME: maybe later
-    //impl->WaitRecordingDevice = DOSSOUNDBLASTER_WaitDevice;
-    //impl->RecordDevice = DOSSOUNDBLASTER_RecordDevice;
-    //impl->FlushRecording = DOSSOUNDBLASTER_FlushRecording;
-    //impl->HasRecordingSupport = true;
-    //impl->OnlyHasDefaultRecordingDevice = true;
-
-    impl->ProvidesOwnCallbackThread = true;  // hardware interrupts!
     impl->OnlyHasDefaultPlaybackDevice = true;
 
     return true;

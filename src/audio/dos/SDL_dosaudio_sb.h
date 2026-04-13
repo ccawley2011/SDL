@@ -36,8 +36,4 @@ struct SDL_PrivateAudioData
     DOS_InterruptHook interrupt_hook;
 };
 
-// Called from the main loop (e.g. DOSVESA_PumpEvents) to run audio mixing
-// in normal (non-IRQ) context.
-void SDL_DOS_PumpAudio(void);
-
 #endif // SDL_dosaudio_sb_h_
