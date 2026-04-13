@@ -33,6 +33,7 @@
 #include "SDL_dosevents_c.h"
 #include "SDL_dosframebuffer_c.h"
 #include "SDL_dosmouse.h"
+#include <sys/movedata.h>  // for dosmemput (banked framebuffer access)
 
 // Some VESA usage information:
 //   https://delorie.com/djgpp/doc/ug/graphics/vesa.html.en
@@ -168,14 +169,14 @@ static const SDL_VESAInfo *GetVESAInfo(void)
     return vesa_info;
 }
 
-static bool SupportsVESA2(void)
+static bool SupportsVESA(void)
 {
     const SDL_VESAInfo *info = GetVESAInfo();
     if (!info) {
         return false;  // it will have set an SDL error string.
-    } else if (info->version < 0x200) {   // not at least VESA 2.0?
+    } else if (info->version < 0x102) {   // not at least VESA 1.2?
         FreeVESAInfo();  // won't be needing this, then.
-        return SDL_SetError("Hardware is not VESA 2.0 compatible");
+        return SDL_SetError("Hardware is not VESA 1.2 compatible");
     }
     // don't free `info`, it's cached for later.
     return true;
@@ -186,7 +187,7 @@ static bool GetVESAModeInfo(Uint16 mode_id, SDL_DisplayModeData *info)
     _go32_dpmi_seginfo hwinfo_seginfo;
     SDL_VESAModeHardwareInfo *hwinfo = (SDL_VESAModeHardwareInfo *) DOS_AllocateConventionalMemory(sizeof (*hwinfo), &hwinfo_seginfo);
     if (!hwinfo) {
-        return NULL;
+        return false;
     }
 
     SDL_zerop(hwinfo);
@@ -217,6 +218,14 @@ static bool GetVESAModeInfo(Uint16 mode_id, SDL_DisplayModeData *info)
         info->blue_mask_size = hwinfo->BlueMaskSize;
         info->blue_mask_pos = hwinfo->BlueMaskPos;
         info->physical_base_addr = hwinfo->PhysBasePtr;
+
+        // VBE 1.2 banked framebuffer fields
+        info->has_lfb = (hwinfo->ModeAttributes & 0x80) != 0;  // bit 7: LFB available
+        info->win_granularity = hwinfo->WinGranularity;
+        info->win_size = hwinfo->WinSize;
+        info->win_a_segment = hwinfo->WinASegment;
+        info->win_func_ptr = hwinfo->WinFuncPtr;
+        info->win_a_attributes = hwinfo->WinAAttributes;
     }
 
     DOS_FreeConventionalMemory(&hwinfo_seginfo);
@@ -252,14 +261,25 @@ static bool DOSVESA_GetDisplayModes(SDL_VideoDevice *device, SDL_VideoDisplay *s
                 (unsigned int) info.physical_base_addr);
         #endif
 
-        if ((info.attributes & 0x99) != 0x99) {  // bit 0: supported in hardware, bit 3:color, bit 4:graphics (not text), bit 7:linear framebuffer == 0b10011001 == 0x99.
-            continue;  // Doesn't have all the attributes we want.
-        } else if (info.num_planes != 1) {
+        // bit 0: supported in hardware, bit 3: color, bit 4: graphics (not text)
+        if ((info.attributes & 0x19) != 0x19) {
+            continue;  // Doesn't have minimum required attributes.
+        }
+
+        // Accept modes with either LFB (bit 7) or a writable banked window.
+        // WinAAttributes bit 0 = window supported, bit 2 = window is writable.
+        if (!(info.attributes & 0x80) && (info.win_a_attributes & 0x05) != 0x05) {
+            continue;  // No LFB and no writable banked window — skip.
+        }
+
+        if (info.num_planes != 1) {
             continue;  // skip planar pixel layouts.
         } else if (info.bpp < 8) {
             continue;  // skip anything below 8-bit.
         } else if (!info.w || !info.h) {
             continue;  // zero-area display mode?!
+        } else if (!info.has_lfb && !info.win_granularity) {
+            continue;  // banked mode with zero granularity would cause division by zero.
         } else if ((info.memory_model != 4) && (info.memory_model != 6)) {
             continue;  // must be either packed pixel (4) or Direct Color (6).
             // Note: 8-bit indexed modes are memory model 4 (packed pixel).
@@ -290,12 +310,13 @@ static bool DOSVESA_GetDisplayModes(SDL_VideoDevice *device, SDL_VideoDisplay *s
         // okay, add this mode.
 
         #if 0
-        SDL_Log("ADD VESA MODE: mode=%d %dx%dx%d fmt=%s attr=%X pitch=%d planes=%d pages=%d addr=%X",
+        SDL_Log("ADD VESA MODE: mode=%d %dx%dx%d fmt=%s attr=%X pitch=%d planes=%d pages=%d addr=%X lfb=%d winA=%X",
                 (int) info.mode_id, (int) info.w, (int) info.h, (int) info.bpp,
                 SDL_GetPixelFormatName(format),
                 (unsigned int) info.attributes, (int) info.pitch,
                 (int) info.num_planes, (int) info.num_image_pages,
-                (unsigned int) info.physical_base_addr);
+                (unsigned int) info.physical_base_addr,
+                (int) info.has_lfb, (unsigned int) info.win_a_attributes);
         #endif
 
         SDL_DisplayModeData *internal = (SDL_DisplayModeData *) SDL_malloc(sizeof (*internal));
@@ -345,34 +366,94 @@ static bool DOSVESA_SetDisplayMode(SDL_VideoDevice *device, SDL_VideoDisplay *sd
 
     if (data->mapping.size) {
         __dpmi_free_physical_address_mapping(&data->mapping);  // dump existing video mapping.
+        SDL_zero(data->mapping);
     }
+
+    const bool use_lfb = modedata->has_lfb;
 
     __dpmi_regs regs;
     regs.x.ax = 0x4F02;
-    regs.x.bx = modedata->mode_id | 0x4000;  // the 0x4000 is the "I want a linear framebuffer" flag.
+    regs.x.bx = modedata->mode_id | (use_lfb ? 0x4000 : 0);  // 0x4000 = "I want a linear framebuffer" flag.
     __dpmi_int(0x10, &regs);
 
     if (regs.x.ax != 0x004F) {
         return SDL_SetError("Failed to set VESA video mode");
     }
 
-    data->mapping.address = modedata->physical_base_addr;
-    data->mapping.size = GetVESAInfo()->total_memory;
-    if (__dpmi_physical_address_mapping(&data->mapping) != 0) {
-        SDL_zero(data->mapping);
-        regs.x.ax = 0x03;  // try to dump us back into text mode. Not sure if this is a good idea, though.
-        __dpmi_int(0x10, &regs);
-        SDL_zero(data->current_mode);
-        return SDL_SetError("Failed to map VESA video memory");
-    }
+    data->banked_mode = !use_lfb;
 
-    // make sure framebuffer is blanked out.
-    SDL_memset(DOS_PhysicalToLinear(data->mapping.address), '\0', modedata->h * modedata->pitch);
+    if (use_lfb) {
+        data->mapping.address = modedata->physical_base_addr;
+        data->mapping.size = GetVESAInfo()->total_memory;
+        if (__dpmi_physical_address_mapping(&data->mapping) != 0) {
+            SDL_zero(data->mapping);
+            regs.x.ax = 0x03;  // try to dump us back into text mode. Not sure if this is a good idea, though.
+            __dpmi_int(0x10, &regs);
+            SDL_zero(data->current_mode);
+            return SDL_SetError("Failed to map VESA video memory");
+        }
+
+        // make sure framebuffer is blanked out.
+        SDL_memset(DOS_PhysicalToLinear(data->mapping.address), '\0', modedata->h * modedata->pitch);
+    } else {
+        // Banked mode: no physical address mapping needed.
+        // Blank the visible framebuffer through the banked window.
+        Uint32 total_bytes = (Uint32)modedata->h * (Uint32)modedata->pitch;
+        Uint32 win_gran_bytes = (Uint32)modedata->win_granularity * 1024;
+        Uint32 win_size_bytes = (Uint32)modedata->win_size * 1024;
+        Uint32 win_base = (Uint32)modedata->win_a_segment << 4;
+        Uint8 zero_buf[1024];
+        SDL_memset(zero_buf, 0, sizeof(zero_buf));
+
+        Uint32 offset = 0;
+        int current_bank = -1;
+        while (offset < total_bytes) {
+            int bank = (int)(offset / win_gran_bytes);
+            Uint32 off_in_win = offset % win_gran_bytes;
+            Uint32 n = win_size_bytes - off_in_win;
+            if (n > total_bytes - offset) {
+                n = total_bytes - offset;
+            }
+
+            if (bank != current_bank) {
+                __dpmi_regs bregs;
+                SDL_zero(bregs);
+                bregs.x.bx = 0;       // Window A
+                bregs.x.dx = (Uint16)bank;
+                if (modedata->win_func_ptr) {
+                    // Call WinFuncPtr directly — faster than INT 10h.
+                    bregs.x.cs = (Uint16)(modedata->win_func_ptr >> 16);
+                    bregs.x.ip = (Uint16)(modedata->win_func_ptr & 0xFFFF);
+                    __dpmi_simulate_real_mode_procedure_retf(&bregs);
+                } else {
+                    bregs.x.ax = 0x4F05;
+                    __dpmi_int(0x10, &bregs);
+                }
+                current_bank = bank;
+            }
+
+            // Zero in 1KB chunks via dosmemput
+            Uint32 written = 0;
+            while (written < n) {
+                Uint32 chunk = n - written;
+                if (chunk > sizeof(zero_buf)) {
+                    chunk = sizeof(zero_buf);
+                }
+                dosmemput(zero_buf, chunk, win_base + off_in_win + written);
+                written += chunk;
+            }
+            offset += n;
+        }
+    }
 
     SDL_copyp(&data->current_mode, mode);
 
     // Set up page-flipping if the mode has at least 1 image page (meaning 2 total)
-    if (modedata->num_image_pages >= 1) {
+    // Note: page-flipping is only supported with LFB modes. With banked modes,
+    // we would still need to bank-switch through the same 64KB window to write
+    // to the back page, so the performance benefit is minimal (just tear-free).
+    // For simplicity, disable page-flipping in banked mode for now.
+    if (!data->banked_mode && modedata->num_image_pages >= 1) {
         data->page_flip_available = true;
         data->current_page = 0;
         data->page_offset[0] = 0;
@@ -643,7 +724,7 @@ static void DOSVESA_Destroy(SDL_VideoDevice *device)
 
 static SDL_VideoDevice *DOSVESA_CreateDevice(void)
 {
-    if (!SupportsVESA2()) {
+    if (!SupportsVESA()) {
         return NULL;
     }
 

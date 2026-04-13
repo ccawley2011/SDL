@@ -45,6 +45,14 @@ struct SDL_DisplayModeData
     Uint8 blue_mask_size;
     Uint8 blue_mask_pos;
     Uint32 physical_base_addr;
+
+    // VBE 1.2 banked framebuffer fields (used when LFB is not available)
+    bool has_lfb;              // true if linear framebuffer is available (VBE 2.0+)
+    Uint16 win_granularity;    // bank positioning granularity in KB
+    Uint16 win_size;           // window size in KB (typically 64)
+    Uint16 win_a_segment;      // real-mode segment of window A (typically 0xA000)
+    Uint32 win_func_ptr;       // real-mode far pointer to bank-switch function
+    Uint8 win_a_attributes;    // window A capabilities
 };
 
 struct SDL_VideoData
@@ -65,6 +73,7 @@ struct SDL_VideoData
     int current_page;          // 0 or 1: which page is currently displayed
     Uint32 page_offset[2];    // byte offset of each page within video memory
     bool page_flip_available;  // true if mode supports double-buffering
+    bool banked_mode;          // true if current mode uses banked (not LFB) access
 };
 
 struct SDL_DisplayData
