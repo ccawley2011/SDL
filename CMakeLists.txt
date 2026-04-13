@@ -3724,7 +3724,7 @@ if(NOT HAVE_SDL_THREADS)
   endif()
 endif()
 if(NOT HAVE_SDL_TIMERS)
-#  message(FATAL_ERROR "Timers are needed by many SDL subsystems and may not be disabled")
+  message(FATAL_ERROR "Timers are needed by many SDL subsystems and may not be disabled")
 endif()
 
 # Most platforms use this.

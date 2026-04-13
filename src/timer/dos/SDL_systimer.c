@@ -63,6 +63,7 @@ void SDL_SYS_DelayNS(Uint64 ns)
             }
             DOS_Yield();
             delay(chunk);
+            DOS_Yield();
             ms -= chunk;
         }
         ns -= (Uint64)((Uint32)(ns / SDL_NS_PER_MS)) * SDL_NS_PER_MS;

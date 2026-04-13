@@ -151,7 +151,6 @@ function(add_sdl_test_executable TARGET)
     SDL_AddCommonCompilerFlags(${TARGET})
     target_include_directories(${TARGET} PRIVATE "${SDL3_SOURCE_DIR}/src/video/khronos")
     target_link_libraries(${TARGET} PRIVATE SDL3::SDL3_test SDL3::${sdl_name_component})
-
     if(AST_DEPENDS)
         add_dependencies(${TARGET} ${AST_DEPENDS})
     endif()
