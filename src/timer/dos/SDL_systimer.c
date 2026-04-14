@@ -32,13 +32,6 @@
    the same approach SDL2-dos used and gives sub-microsecond precision without
    any extra setup. */
 
-/* How often to yield during SDL_Delay, in milliseconds.  5 ms gives other
-   cooperative threads (loading, etc.) a chance to run without adding
-   significant overhead to the delay loop.  This also ensures audio pumping
-   (which happens when the main thread yields back to the event pump caller)
-   is not starved during long delays like frame-rate limiters. */
-#define DOS_YIELD_INTERVAL_MS 5
-
 Uint64 SDL_GetPerformanceCounter(void)
 {
     return (Uint64)uclock();
@@ -56,41 +49,21 @@ void SDL_SYS_DelayNS(Uint64 ns)
         return;
     }
 
-    /* Track wall-clock time so that time spent in DOS_Yield() (running other
-       cooperative threads) counts towards the requested delay.
-       We periodically call DOS_Yield() so cooperative threads can run. */
     const uclock_t delay_start = uclock();
     const uclock_t target_ticks = (uclock_t)((ns * UCLOCKS_PER_SEC) / SDL_NS_PER_SECOND);
 
     while ((uclock() - delay_start) < target_ticks) {
-        uclock_t remaining = target_ticks - (uclock() - delay_start);
-        Uint32 remaining_ms = (Uint32)(remaining / (UCLOCKS_PER_SEC / 1000));
-
-        if (remaining_ms < 1) {
-            break; /* sub-millisecond remainder: busy-wait below */
-        }
-
-        Uint32 chunk = remaining_ms;
-        if (chunk > DOS_YIELD_INTERVAL_MS) {
-            chunk = DOS_YIELD_INTERVAL_MS;
-        }
+        /* Always yield first so cooperative threads can run. */
         DOS_Yield();
 
-        /* Recalculate after yield. Other threads may have consumed time. */
-        remaining = target_ticks - (uclock() - delay_start);
-        remaining_ms = (Uint32)(remaining / (UCLOCKS_PER_SEC / 1000));
-        if (remaining_ms > 0) {
-            chunk = remaining_ms;
-            if (chunk > DOS_YIELD_INTERVAL_MS) {
-                chunk = DOS_YIELD_INTERVAL_MS;
-            }
-            delay(chunk);
+        /* If more than 1 ms remains, do a short sleep to avoid burning
+           100% CPU when no other threads need to run.  DJGPP's delay()
+           is a busy-wait but it does halt-loop on the PIT, which is
+           lighter than a tight uclock() poll. */
+        uclock_t remaining = target_ticks - (uclock() - delay_start);
+        if (remaining > (UCLOCKS_PER_SEC / 1000)) {
+            delay(1);
         }
-    }
-
-    /* Busy-wait for any remaining sub-millisecond portion */
-    while ((uclock() - delay_start) < target_ticks) {
-        /* spin */
     }
 }
 

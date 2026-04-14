@@ -321,9 +321,13 @@ int main(int argc, char **argv)
     TestOverheadUncontended();
 
     if (enable_threads) {
+#ifdef __DJGPP__
+        SDL_Log("Skipping contended overhead tests (too slow for cooperative threading)");
+#else
         TestOverheadContended(false);
 
         TestOverheadContended(true);
+#endif
     }
 
     SDL_Quit();

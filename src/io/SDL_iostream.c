@@ -751,10 +751,6 @@ static Sint64 SDLCALL stdio_seek(void *userdata, Sint64 offset, SDL_IOWhence whe
     const bool is_noop = (whence == SDL_IO_SEEK_CUR) && (offset == 0);
 
     if (is_noop || fseek(iodata->fp, (fseek_off_t)offset, stdiowhence) == 0) {
-        #ifdef SDL_PLATFORM_DOS  // DJGPP libc bug: fseek doesn't invalidate the read buffer, so subsequent reads return stale data. Flush and recreate the buffer as a workaround.
-        setvbuf(iodata->fp, NULL, _IONBF, 0);
-        setvbuf(iodata->fp, NULL, _IOFBF, 16 * 1024);
-        #endif
         const Sint64 pos = ftell(iodata->fp);
         if (pos < 0) {
             SDL_SetError("Couldn't get stream offset: %s", strerror(errno));

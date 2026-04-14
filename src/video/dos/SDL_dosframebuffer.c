@@ -339,11 +339,15 @@ bool DOSVESA_UpdateWindowFramebuffer(SDL_VideoDevice *device, SDL_Window *window
         SDL_Surface *cursor_save = NULL;
         bool have_cursor_rect = false;
 
-        if (mouse && mouse->internal && !mouse->relative_mode && mouse->cursor_visible && mouse->cur_cursor && mouse->cur_cursor->internal) {
-            cursor = mouse->cur_cursor->internal->surface;
+        SDL_Cursor *cur = mouse ? mouse->cur_cursor : NULL;
+        if (cur && cur->animation) {
+            cur = cur->animation->frames[cur->animation->current_frame];
+        }
+        if (mouse && mouse->internal && !mouse->relative_mode && mouse->cursor_visible && cur && cur->internal) {
+            cursor = cur->internal->surface;
             if (cursor) {
-                cursorrect.x = SDL_clamp((int)mouse->x, 0, window->w) - mouse->cur_cursor->internal->hot_x;
-                cursorrect.y = SDL_clamp((int)mouse->y, 0, window->h) - mouse->cur_cursor->internal->hot_y;
+                cursorrect.x = SDL_clamp((int)mouse->x, 0, window->w) - cur->internal->hot_x;
+                cursorrect.y = SDL_clamp((int)mouse->y, 0, window->h) - cur->internal->hot_y;
                 cursorrect.w = cursor->w;
                 cursorrect.h = cursor->h;
 
@@ -469,11 +473,15 @@ bool DOSVESA_UpdateWindowFramebuffer(SDL_VideoDevice *device, SDL_Window *window
         SDL_Surface *cursor = NULL;
         SDL_Rect cursorrect;
 
-        if (mouse && mouse->internal && !mouse->relative_mode && mouse->cursor_visible && mouse->cur_cursor && mouse->cur_cursor->internal) {
-            cursor = mouse->cur_cursor->internal->surface;
+        SDL_Cursor *cur = mouse ? mouse->cur_cursor : NULL;
+        if (cur && cur->animation) {
+            cur = cur->animation->frames[cur->animation->current_frame];
+        }
+        if (mouse && mouse->internal && !mouse->relative_mode && mouse->cursor_visible && cur && cur->internal) {
+            cursor = cur->internal->surface;
             if (cursor) {
-                cursorrect.x = dstrect.x + SDL_clamp((int)mouse->x, 0, window->w) - mouse->cur_cursor->internal->hot_x;
-                cursorrect.y = dstrect.y + SDL_clamp((int)mouse->y, 0, window->h) - mouse->cur_cursor->internal->hot_y;
+                cursorrect.x = dstrect.x + SDL_clamp((int)mouse->x, 0, window->w) - cur->internal->hot_x;
+                cursorrect.y = dstrect.y + SDL_clamp((int)mouse->y, 0, window->h) - cur->internal->hot_y;
             }
         }
 

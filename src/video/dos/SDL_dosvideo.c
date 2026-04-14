@@ -106,12 +106,9 @@ static bool DOSVESA_CreateWindow(SDL_VideoDevice *device, SDL_Window *window, SD
         }
     }
 
-    // if we're going fullscreen, don't set a video mode now, since we're just going to set one in a moment anyhow.
-    if ((window->pending_flags & SDL_WINDOW_FULLSCREEN) == 0) {
-        if (!DOSVESA_SetDisplayMode(device, display, &closest)) {
-            SDL_free(wdata);
-            return false;
-        }
+    if (!DOSVESA_SetDisplayMode(device, display, &closest)) {
+        SDL_free(wdata);
+        return false;
     }
 
     // Setup driver data for this window

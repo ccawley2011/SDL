@@ -31,7 +31,7 @@ extern "C" {
 
 // Maximum number of cooperative threads. DOS doesn't need many —
 // typically just main thread + audio thread + maybe a loading thread.
-#define DOS_MAX_THREADS 8
+#define DOS_MAX_THREADS 16
 
 // Default stack size for new threads (64 KB)
 #define DOS_DEFAULT_STACK_SIZE (64 * 1024)
