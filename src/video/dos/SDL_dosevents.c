@@ -289,17 +289,35 @@ void DOSVESA_PumpEvents(SDL_VideoDevice *device)
         const int scancode = (int)(event & SCANCODE_MASK);
         const bool pressed = ((event & SCANCODE_RELEASE) == 0);
 
+        SDL_Scancode sc = SDL_SCANCODE_UNKNOWN;
+
         if (is_extended) {
             is_extended = false;
             if (scancode < SDL_arraysize(DOSVESA_ExtendedScancodeMapping)) {
-                const SDL_Scancode sc = DOSVESA_ExtendedScancodeMapping[scancode];
-                if (sc != SDL_SCANCODE_UNKNOWN) {
-                    SDL_SendKeyboardKey(0, SDL_GLOBAL_KEYBOARD_ID, 0, sc, pressed);
-                }
+                sc = DOSVESA_ExtendedScancodeMapping[scancode];
             }
         } else {
             if (scancode < SDL_arraysize(DOSVESA_ScancodeMapping)) {
-                SDL_SendKeyboardKey(0, SDL_GLOBAL_KEYBOARD_ID, 0, DOSVESA_ScancodeMapping[scancode], pressed);
+                sc = DOSVESA_ScancodeMapping[scancode];
+            }
+        }
+
+        if (sc != SDL_SCANCODE_UNKNOWN) {
+            SDL_SendKeyboardKey(0, SDL_GLOBAL_KEYBOARD_ID, 0, sc, pressed);
+
+            // Generate text input events for key-down on printable characters.
+            // SDL keycodes below SDLK_SCANCODE_MASK are Unicode codepoints.
+            if (pressed) {
+                SDL_Keymod mod = SDL_GetModState();
+                if (!(mod & (SDL_KMOD_CTRL | SDL_KMOD_ALT))) {
+                    SDL_Keycode keycode = SDL_GetKeyFromScancode(sc, mod, false);
+                    if (keycode > 0 && keycode < SDLK_SCANCODE_MASK && !SDL_iscntrl((int)keycode)) {
+                        char text[5];
+                        char *end = SDL_UCS4ToUTF8((Uint32)keycode, text);
+                        *end = '\0';
+                        SDL_SendKeyboardText(text);
+                    }
+                }
             }
         }
     }

@@ -390,13 +390,6 @@ bool DOSVESA_SetDisplayMode(SDL_VideoDevice *device, SDL_VideoDisplay *sdl_displ
     SDL_VideoData *data = device->internal;
     const SDL_DisplayModeData *modedata = mode->internal;
 
-    // During shutdown, SDL resets to the desktop mode which has no internal
-    // data (it was synthesised in VideoInit as a placeholder).  Just let
-    // VideoQuit handle the actual VBE mode restore.
-    if (!modedata) {
-        return true;
-    }
-
     if (data->current_mode.internal && (data->current_mode.internal->mode_id == modedata->mode_id)) {
         return true;
     }

@@ -43,74 +43,6 @@ static bool DOSVESA_CreateWindow(SDL_VideoDevice *device, SDL_Window *window, SD
         return false;
     }
 
-    SDL_VideoDisplay *display = SDL_GetVideoDisplayForWindow(window);
-
-    SDL_DisplayMode closest;
-    if (!SDL_GetClosestFullscreenDisplayMode(display->id, window->w, window->h, 0.0f, false, &closest)) {
-        SDL_assert(display->num_fullscreen_modes > 0);
-        SDL_copyp(&closest, &display->fullscreen_modes[0]);
-        window->w = closest.w; // clamp window to the largest size we have available.
-        window->h = closest.h; // clamp window to the largest size we have available.
-    }
-
-    // SDL_GetClosestFullscreenDisplayMode picks by resolution/refresh only and
-    // may return an INDEX8 mode even when the app wants RGB.  Unless the window
-    // was explicitly created with SDL_PIXELFORMAT_INDEX8 (checked via the
-    // create_props), prefer the highest-bpp mode at the same resolution so that
-    // the software renderer and other RGB consumers work correctly.
-    if (closest.format == SDL_PIXELFORMAT_INDEX8) {
-        bool want_index8 = false;
-        if (create_props) {
-            const char *fmt_hint = SDL_GetStringProperty(create_props, "SDL_PIXELFORMAT", NULL);
-            if (fmt_hint && SDL_strcmp(fmt_hint, "INDEX8") == 0) {
-                want_index8 = true;
-            }
-        }
-        if (!want_index8) {
-            // Scan all modes for a higher-bpp mode at the same (or similar) resolution.
-            SDL_DisplayMode best;
-            SDL_zero(best);
-            for (int i = 0; i < display->num_fullscreen_modes; ++i) {
-                const SDL_DisplayMode *m = &display->fullscreen_modes[i];
-                if (m->format == SDL_PIXELFORMAT_INDEX8) {
-                    continue;
-                }
-                if (m->w == closest.w && m->h == closest.h) {
-                    // Exact resolution match — pick highest bpp.
-                    if (!best.internal || SDL_BITSPERPIXEL(m->format) > SDL_BITSPERPIXEL(best.format)) {
-                        SDL_copyp(&best, m);
-                    }
-                }
-            }
-            if (!best.internal) {
-                // No exact match — find the smallest non-INDEX8 mode that fits.
-                for (int i = 0; i < display->num_fullscreen_modes; ++i) {
-                    const SDL_DisplayMode *m = &display->fullscreen_modes[i];
-                    if (m->format == SDL_PIXELFORMAT_INDEX8) {
-                        continue;
-                    }
-                    if (m->w >= closest.w && m->h >= closest.h) {
-                        if (!best.internal || (m->w * m->h) < (best.w * best.h) ||
-                            ((m->w == best.w && m->h == best.h) &&
-                             SDL_BITSPERPIXEL(m->format) > SDL_BITSPERPIXEL(best.format))) {
-                            SDL_copyp(&best, m);
-                        }
-                    }
-                }
-            }
-            if (best.internal) {
-                SDL_copyp(&closest, &best);
-            }
-            // If no non-INDEX8 mode was found at all, fall through with the
-            // original INDEX8 mode — better than failing.
-        }
-    }
-
-    if (!DOSVESA_SetDisplayMode(device, display, &closest)) {
-        SDL_free(wdata);
-        return false;
-    }
-
     // Setup driver data for this window
     window->internal = wdata;
 
@@ -132,9 +64,18 @@ static bool DOSVESA_VideoInit(SDL_VideoDevice *device)
 {
     SDL_VideoData *data = device->internal;
 
+    // Verify that the "fat DS" nearptr trick is active. Without it,
+    // DOS_PhysicalToLinear() produces garbage pointers and we crash.
+    // SDL_RunApp() enables this automatically; if the app defined
+    // SDL_MAIN_HANDLED it must call __djgpp_nearptr_enable() itself.
+    if (__djgpp_conventional_base == 0) {
+        return SDL_SetError("DOSVESA: __djgpp_nearptr_enable() was not called. "
+                            "Did you define SDL_MAIN_HANDLED without enabling the fat DS trick?");
+    }
+
     // We are probably in text mode at startup, so we don't have a real "desktop mode" atm.
     // Pick something _super_ conservative for now.
-    //  We'll change to a real video mode when they create an SDL window.
+    //  We'll change to a real video mode after enumerating available modes below.
     SDL_DisplayMode mode;
     SDL_zero(mode);
     mode.format = SDL_PIXELFORMAT_RGB565;
@@ -150,6 +91,53 @@ static bool DOSVESA_VideoInit(SDL_VideoDevice *device)
     SDL_VideoDisplay *display = SDL_GetVideoDisplay(display_id);
     if (!display || !DOSVESA_GetDisplayModes(device, display)) {
         return false;
+    }
+
+    // Pick a sensible default desktop mode. This determines the window
+    // size for FULLSCREEN_ONLY. Target 640x480 as a safe default; apps
+    // that want something else should call SDL_SetWindowFullscreenMode.
+    {
+        const int target_w = 640;
+        const int target_h = 480;
+        const SDL_DisplayMode *best = NULL;
+        for (int i = 0; i < display->num_fullscreen_modes; ++i) {
+            const SDL_DisplayMode *m = &display->fullscreen_modes[i];
+            if (m->format == SDL_PIXELFORMAT_INDEX8) {
+                continue;
+            }
+            if (m->w < target_w || m->h < target_h) {
+                continue;
+            }
+            if (!best ||
+                (m->w * m->h) < (best->w * best->h) ||
+                ((m->w == best->w && m->h == best->h) &&
+                 SDL_BITSPERPIXEL(m->format) < SDL_BITSPERPIXEL(best->format))) {
+                best = m;
+            }
+        }
+        // If nothing >= 640x480 was found, just take the largest available.
+        if (!best) {
+            for (int i = 0; i < display->num_fullscreen_modes; ++i) {
+                const SDL_DisplayMode *m = &display->fullscreen_modes[i];
+                if (m->format == SDL_PIXELFORMAT_INDEX8) {
+                    continue;
+                }
+                if (!best || (m->w * m->h) > (best->w * best->h)) {
+                    best = m;
+                }
+            }
+        }
+        if (best) {
+            // Deep-copy the mode into desktop_mode. We need our own
+            // internal allocation because SDL frees desktop_mode.internal
+            // and fullscreen_modes[].internal independently.
+            SDL_DisplayModeData *desktop_internal = (SDL_DisplayModeData *)SDL_malloc(sizeof(*desktop_internal));
+            if (desktop_internal) {
+                SDL_copyp(desktop_internal, (const SDL_DisplayModeData *)best->internal);
+                SDL_copyp(&display->desktop_mode, best);
+                display->desktop_mode.internal = desktop_internal;
+            }
+        }
     }
 
     // Save the current VBE mode so we can restore it on quit.
@@ -300,13 +288,7 @@ static SDL_VideoDevice *DOSVESA_CreateDevice(void)
     device->UpdateWindowFramebuffer = DOSVESA_UpdateWindowFramebuffer;
     device->DestroyWindowFramebuffer = DOSVESA_DestroyWindowFramebuffer;
     device->PumpEvents = DOSVESA_PumpEvents;
-
-    // strictly-speaking, we're fullscreen-only, but we don't know the "default" video mode
-    // because we're probably in text mode! So in CreateWindow we try to set a resolution
-    // close to the window size and center it if they aren't asking for a specific mode
-    // but we can't do this if VIDEO_DEVICE_CAPS_FULLSCREEN_ONLY is set, since SDL will
-    // change the window size to the current "desktop" mode.
-    // device->device_caps = VIDEO_DEVICE_CAPS_FULLSCREEN_ONLY;
+    device->device_caps = VIDEO_DEVICE_CAPS_FULLSCREEN_ONLY;
 
     return device;
 }
