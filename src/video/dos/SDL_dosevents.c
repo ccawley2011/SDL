@@ -107,7 +107,7 @@ static const SDL_Scancode DOSVESA_ScancodeMapping[] = { // index is the scancode
     /* 0x34 */ SDL_SCANCODE_PERIOD,
     /* 0x35 */ SDL_SCANCODE_SLASH,
     /* 0x36 */ SDL_SCANCODE_RSHIFT,
-    /* 0x37 */ SDL_SCANCODE_PRINTSCREEN,
+    /* 0x37 */ SDL_SCANCODE_KP_MULTIPLY,
     /* 0x38 */ SDL_SCANCODE_LALT,
     /* 0x39 */ SDL_SCANCODE_SPACE,
     /* 0x3A */ SDL_SCANCODE_CAPSLOCK,
