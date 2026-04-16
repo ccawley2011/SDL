@@ -29,7 +29,7 @@
 
 // this locks .data, .bss, .text, and the stack. In SDL_RunApp(), we'll adjust this flag so future malloc() calls aren't locked by default.
 #include <crt0.h>
-int _crt0_startup_flags = _CRT0_FLAG_LOCK_MEMORY; // | _CRT0_FLAG_NONMOVE_SBRK;
+int _crt0_startup_flags = _CRT0_FLAG_LOCK_MEMORY | _CRT0_FLAG_NONMOVE_SBRK;
 
 const char *SDL_argv0 = NULL;
 

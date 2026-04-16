@@ -70,6 +70,7 @@ extern "C" {
 //  C pointer usable from protected mode.
 SDL_FORCE_INLINE void *DOS_PhysicalToLinear(const Uint32 physical)
 {
+    __djgpp_nearptr_enable(); // We need to re-enable this for large applications to work.
     return (void *)(physical + __djgpp_conventional_base);
 }
 
