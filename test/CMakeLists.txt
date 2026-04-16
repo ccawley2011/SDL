@@ -437,6 +437,7 @@ add_sdl_test_executable(testsprite MAIN_CALLBACKS NEEDS_RESOURCES TESTUTILS SOUR
 add_sdl_test_executable(testspriteminimal SOURCES testspriteminimal.c ${icon_png_header} DEPENDS generate-icon_png_header NAME83 spritmin)
 add_sdl_test_executable(testspritesurface SOURCES testspritesurface.c ${icon_png_header} DEPENDS generate-icon_png_header NAME83 spritsrf)
 add_sdl_test_executable(testpalette SOURCES testpalette.c NAME83 palette)
+add_sdl_test_executable(testpalettemode SOURCES testpalettemode.c NAME83 palmode)
 add_sdl_test_executable(testtimer NONINTERACTIVE NONINTERACTIVE_ARGS --no-interactive NONINTERACTIVE_TIMEOUT 60 SOURCES testtimer.c NAME83 timer)
 add_sdl_test_executable(testurl SOURCES testurl.c NAME83 url)
 add_sdl_test_executable(testver NONINTERACTIVE NOTRACKMEM SOURCES testver.c NAME83 versdl)
