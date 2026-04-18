@@ -276,7 +276,7 @@ static SDL_Storage *GENERIC_Title_Create(const char *override, SDL_PropertiesID 
     return result;
 }
 
-TitleStorageBootStrap GENERIC_titlebootstrap = {
+const TitleStorageBootStrap GENERIC_titlebootstrap = {
     "generic",
     "SDL generic title storage driver",
     GENERIC_Title_Create
@@ -312,7 +312,7 @@ static SDL_Storage *GENERIC_User_Create(const char *org, const char *app, SDL_Pr
     return result;
 }
 
-UserStorageBootStrap GENERIC_userbootstrap = {
+const UserStorageBootStrap GENERIC_userbootstrap = {
     "generic",
     "SDL generic user storage driver",
     GENERIC_User_Create

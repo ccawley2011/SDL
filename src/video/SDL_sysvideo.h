@@ -522,30 +522,30 @@ typedef struct VideoBootStrap
 } VideoBootStrap;
 
 // Not all of these are available in a given build. Use #ifdefs, etc.
-extern VideoBootStrap PRIVATE_bootstrap;
-extern VideoBootStrap COCOA_bootstrap;
-extern VideoBootStrap X11_bootstrap;
-extern VideoBootStrap WINDOWS_bootstrap;
-extern VideoBootStrap HAIKU_bootstrap;
-extern VideoBootStrap UIKIT_bootstrap;
-extern VideoBootStrap Android_bootstrap;
-extern VideoBootStrap PS2_bootstrap;
-extern VideoBootStrap PSP_bootstrap;
-extern VideoBootStrap VITA_bootstrap;
-extern VideoBootStrap RISCOS_bootstrap;
-extern VideoBootStrap N3DS_bootstrap;
-extern VideoBootStrap NGAGE_bootstrap;
-extern VideoBootStrap RPI_bootstrap;
-extern VideoBootStrap KMSDRM_bootstrap;
-extern VideoBootStrap DUMMY_bootstrap;
-extern VideoBootStrap DUMMY_evdev_bootstrap;
-extern VideoBootStrap Wayland_preferred_bootstrap;
-extern VideoBootStrap Wayland_bootstrap;
-extern VideoBootStrap VIVANTE_bootstrap;
-extern VideoBootStrap Emscripten_bootstrap;
-extern VideoBootStrap OFFSCREEN_bootstrap;
-extern VideoBootStrap QNX_bootstrap;
-extern VideoBootStrap OPENVR_bootstrap;
+extern const VideoBootStrap PRIVATE_bootstrap;
+extern const VideoBootStrap COCOA_bootstrap;
+extern const VideoBootStrap X11_bootstrap;
+extern const VideoBootStrap WINDOWS_bootstrap;
+extern const VideoBootStrap HAIKU_bootstrap;
+extern const VideoBootStrap UIKIT_bootstrap;
+extern const VideoBootStrap Android_bootstrap;
+extern const VideoBootStrap PS2_bootstrap;
+extern const VideoBootStrap PSP_bootstrap;
+extern const VideoBootStrap VITA_bootstrap;
+extern const VideoBootStrap RISCOS_bootstrap;
+extern const VideoBootStrap N3DS_bootstrap;
+extern const VideoBootStrap NGAGE_bootstrap;
+extern const VideoBootStrap RPI_bootstrap;
+extern const VideoBootStrap KMSDRM_bootstrap;
+extern const VideoBootStrap DUMMY_bootstrap;
+extern const VideoBootStrap DUMMY_evdev_bootstrap;
+extern const VideoBootStrap Wayland_preferred_bootstrap;
+extern const VideoBootStrap Wayland_bootstrap;
+extern const VideoBootStrap VIVANTE_bootstrap;
+extern const VideoBootStrap Emscripten_bootstrap;
+extern const VideoBootStrap OFFSCREEN_bootstrap;
+extern const VideoBootStrap QNX_bootstrap;
+extern const VideoBootStrap OPENVR_bootstrap;
 
 extern bool SDL_UninitializedVideo(void);
 // Use SDL_OnVideoThread() sparingly, to avoid regressions in use cases that currently happen to work

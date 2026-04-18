@@ -714,7 +714,7 @@ cleanup:
     return NULL;
 }
 
-VideoBootStrap KMSDRM_bootstrap = {
+const VideoBootStrap KMSDRM_bootstrap = {
     "kmsdrm",
     "KMS/DRM Video Driver",
     KMSDRM_CreateDevice,

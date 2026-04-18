@@ -970,7 +970,7 @@ static bool V4L2_Init(SDL_CameraDriverImpl *impl)
     return true;
 }
 
-CameraBootStrap V4L2_bootstrap = {
+const CameraBootStrap V4L2_bootstrap = {
     "v4l2", "SDL Video4Linux2 camera driver", V4L2_Init, false
 };
 

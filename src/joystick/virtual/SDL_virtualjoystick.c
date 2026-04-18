@@ -963,7 +963,7 @@ static bool VIRTUAL_JoystickGetGamepadMapping(int device_index, SDL_GamepadMappi
     return true;
 }
 
-SDL_JoystickDriver SDL_VIRTUAL_JoystickDriver = {
+const SDL_JoystickDriver SDL_VIRTUAL_JoystickDriver = {
     VIRTUAL_JoystickInit,
     VIRTUAL_JoystickGetCount,
     VIRTUAL_JoystickDetect,

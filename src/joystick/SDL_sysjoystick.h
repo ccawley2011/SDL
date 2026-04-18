@@ -135,7 +135,7 @@ struct SDL_Joystick
 
     Uint64 update_complete _guarded;
 
-    struct SDL_JoystickDriver *driver _guarded;
+    const struct SDL_JoystickDriver *driver _guarded;
 
     struct joystick_hwdata *hwdata _guarded; // Driver dependent information
 
@@ -243,26 +243,26 @@ typedef struct SDL_JoystickDriver
 #define SDL_LED_MIN_REPEAT_MS 5000
 
 // The available joystick drivers
-extern SDL_JoystickDriver SDL_PRIVATE_JoystickDriver;
-extern SDL_JoystickDriver SDL_ANDROID_JoystickDriver;
-extern SDL_JoystickDriver SDL_BSD_JoystickDriver;
-extern SDL_JoystickDriver SDL_DARWIN_JoystickDriver;
-extern SDL_JoystickDriver SDL_DUMMY_JoystickDriver;
-extern SDL_JoystickDriver SDL_EMSCRIPTEN_JoystickDriver;
-extern SDL_JoystickDriver SDL_HAIKU_JoystickDriver;
-extern SDL_JoystickDriver SDL_HIDAPI_JoystickDriver;
-extern SDL_JoystickDriver SDL_RAWINPUT_JoystickDriver;
-extern SDL_JoystickDriver SDL_IOS_JoystickDriver;
-extern SDL_JoystickDriver SDL_LINUX_JoystickDriver;
-extern SDL_JoystickDriver SDL_VIRTUAL_JoystickDriver;
-extern SDL_JoystickDriver SDL_WGI_JoystickDriver;
-extern SDL_JoystickDriver SDL_WINDOWS_JoystickDriver;
-extern SDL_JoystickDriver SDL_WINMM_JoystickDriver;
-extern SDL_JoystickDriver SDL_PS2_JoystickDriver;
-extern SDL_JoystickDriver SDL_PSP_JoystickDriver;
-extern SDL_JoystickDriver SDL_VITA_JoystickDriver;
-extern SDL_JoystickDriver SDL_N3DS_JoystickDriver;
-extern SDL_JoystickDriver SDL_GAMEINPUT_JoystickDriver;
+extern const SDL_JoystickDriver SDL_PRIVATE_JoystickDriver;
+extern const SDL_JoystickDriver SDL_ANDROID_JoystickDriver;
+extern const SDL_JoystickDriver SDL_BSD_JoystickDriver;
+extern const SDL_JoystickDriver SDL_DARWIN_JoystickDriver;
+extern const SDL_JoystickDriver SDL_DUMMY_JoystickDriver;
+extern const SDL_JoystickDriver SDL_EMSCRIPTEN_JoystickDriver;
+extern const SDL_JoystickDriver SDL_HAIKU_JoystickDriver;
+extern const SDL_JoystickDriver SDL_HIDAPI_JoystickDriver;
+extern const SDL_JoystickDriver SDL_RAWINPUT_JoystickDriver;
+extern const SDL_JoystickDriver SDL_IOS_JoystickDriver;
+extern const SDL_JoystickDriver SDL_LINUX_JoystickDriver;
+extern const SDL_JoystickDriver SDL_VIRTUAL_JoystickDriver;
+extern const SDL_JoystickDriver SDL_WGI_JoystickDriver;
+extern const SDL_JoystickDriver SDL_WINDOWS_JoystickDriver;
+extern const SDL_JoystickDriver SDL_WINMM_JoystickDriver;
+extern const SDL_JoystickDriver SDL_PS2_JoystickDriver;
+extern const SDL_JoystickDriver SDL_PSP_JoystickDriver;
+extern const SDL_JoystickDriver SDL_VITA_JoystickDriver;
+extern const SDL_JoystickDriver SDL_N3DS_JoystickDriver;
+extern const SDL_JoystickDriver SDL_GAMEINPUT_JoystickDriver;
 
 // Ends C function definitions when using C++
 #ifdef __cplusplus

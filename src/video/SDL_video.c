@@ -79,7 +79,7 @@
 #endif /* GL_RGBA_FLOAT_MODE_ARB */
 
 // Available video drivers
-static VideoBootStrap *bootstrap[] = {
+static const VideoBootStrap *const bootstrap[] = {
 #ifdef SDL_VIDEO_DRIVER_PRIVATE
     &PRIVATE_bootstrap,
 #endif

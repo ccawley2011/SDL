@@ -40,12 +40,12 @@ typedef struct UserStorageBootStrap
 
 // Not all of these are available in a given build. Use #ifdefs, etc.
 
-extern TitleStorageBootStrap GENERIC_titlebootstrap;
+extern const TitleStorageBootStrap GENERIC_titlebootstrap;
 // Steam does not have title storage APIs
 
-extern UserStorageBootStrap GENERIC_userbootstrap;
-extern UserStorageBootStrap PRIVATE_userbootstrap;
-extern UserStorageBootStrap STEAM_userbootstrap;
+extern const UserStorageBootStrap GENERIC_userbootstrap;
+extern const UserStorageBootStrap PRIVATE_userbootstrap;
+extern const UserStorageBootStrap STEAM_userbootstrap;
 
 extern SDL_Storage *GENERIC_OpenFileStorage(const char *path);
 

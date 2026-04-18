@@ -74,7 +74,7 @@ static bool DUMMYCAMERA_Init(SDL_CameraDriverImpl *impl)
     return true;
 }
 
-CameraBootStrap DUMMYCAMERA_bootstrap = {
+const CameraBootStrap DUMMYCAMERA_bootstrap = {
     "dummy", "SDL dummy camera driver", DUMMYCAMERA_Init, true
 };
 

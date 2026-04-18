@@ -24,7 +24,7 @@
 #define SDL_blit_h_
 
 // Table to do pixel byte expansion
-extern const Uint8 *SDL_expand_byte[9];
+extern const Uint8 *const SDL_expand_byte[9];
 extern const Uint16 SDL_expand_byte_10[];
 
 // SDL blit copy flags

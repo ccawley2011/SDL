@@ -48,7 +48,7 @@
 #include "./virtual/SDL_virtualjoystick_c.h"
 #endif
 
-static SDL_JoystickDriver *SDL_joystick_drivers[] = {
+static const SDL_JoystickDriver *const SDL_joystick_drivers[] = {
 #ifdef SDL_JOYSTICK_HIDAPI // Highest priority driver for supported devices
     &SDL_HIDAPI_JoystickDriver,
 #endif
@@ -126,7 +126,7 @@ static SDL_JoystickID *SDL_joystick_players SDL_GUARDED_BY(SDL_joystick_lock) = 
 static SDL_HashTable *SDL_joystick_names SDL_GUARDED_BY(SDL_joystick_lock) = NULL;
 static bool SDL_joystick_allows_background_events = false;
 
-static Uint32 initial_old_xboxone_controllers[] = {
+static const Uint32 initial_old_xboxone_controllers[] = {
     MAKE_VIDPID(0x0000, 0x6686),
     MAKE_VIDPID(0x0079, 0x18a1),
     MAKE_VIDPID(0x0079, 0x18c2),
@@ -292,7 +292,7 @@ static SDL_vidpid_list old_xboxone_controllers = {
     false
 };
 
-static Uint32 initial_arcadestick_devices[] = {
+static const Uint32 initial_arcadestick_devices[] = {
     MAKE_VIDPID(0x0079, 0x181a), // Venom Arcade Stick
     MAKE_VIDPID(0x0079, 0x181b), // Venom Arcade Stick
     MAKE_VIDPID(0x0c12, 0x0ef6), // Hitbox Arcade Stick
@@ -336,7 +336,7 @@ static SDL_vidpid_list arcadestick_devices = {
 /* This list is taken from:
    https://raw.githubusercontent.com/denilsonsa/udev-joystick-blacklist/master/generate_rules.py
  */
-static Uint32 initial_blacklist_devices[] = {
+static const Uint32 initial_blacklist_devices[] = {
     // Microsoft Microsoft Wireless Optical Desktop 2.10
     // Microsoft Wireless Desktop - Comfort Edition
     MAKE_VIDPID(0x045e, 0x009d),
@@ -459,7 +459,7 @@ static SDL_vidpid_list blacklist_devices = {
     false
 };
 
-static Uint32 initial_flightstick_devices[] = {
+static const Uint32 initial_flightstick_devices[] = {
     MAKE_VIDPID(0x044f, 0x0402), // HOTAS Warthog Joystick
     MAKE_VIDPID(0x044f, 0xb10a), // ThrustMaster, Inc. T.16000M Joystick
     MAKE_VIDPID(0x046d, 0xc215), // Logitech Extreme 3D
@@ -485,7 +485,7 @@ static SDL_vidpid_list flightstick_devices = {
     false
 };
 
-static Uint32 initial_gamecube_devices[] = {
+static const Uint32 initial_gamecube_devices[] = {
     MAKE_VIDPID(0x0079, 0x1843), // DragonRise GameCube Controller Adapter
     MAKE_VIDPID(0x0079, 0x1844), // DragonRise GameCube Controller Adapter
     MAKE_VIDPID(0x0079, 0x1846), // DragonRise GameCube Controller Adapter
@@ -503,7 +503,7 @@ static SDL_vidpid_list gamecube_devices = {
     false
 };
 
-static Uint32 initial_rog_gamepad_mice[] = {
+static const Uint32 initial_rog_gamepad_mice[] = {
     MAKE_VIDPID(0x0b05, 0x18e3), // ROG Chakram (wired) Mouse
     MAKE_VIDPID(0x0b05, 0x18e5), // ROG Chakram (wireless) Mouse
     MAKE_VIDPID(0x0b05, 0x1906), // ROG Pugio II
@@ -519,7 +519,7 @@ static SDL_vidpid_list rog_gamepad_mice = {
     false
 };
 
-static Uint32 initial_throttle_devices[] = {
+static const Uint32 initial_throttle_devices[] = {
     MAKE_VIDPID(0x044f, 0x0404), // HOTAS Warthog Throttle
     MAKE_VIDPID(0x0738, 0xa221), // Saitek Pro Flight X-56 Rhino Throttle
     MAKE_VIDPID(0x10f5, 0x7085), // Turtle Beach VelocityOne Throttle
@@ -531,7 +531,7 @@ static SDL_vidpid_list throttle_devices = {
     false
 };
 
-static Uint32 initial_wheel_devices[] = {
+static const Uint32 initial_wheel_devices[] = {
     MAKE_VIDPID(0x0079, 0x1864), // DragonRise Inc. Wired Wheel (active mode) (also known as PXN V900 (PS3), Superdrive SV-750, or a Genesis Seaborg 400)
     MAKE_VIDPID(0x044f, 0xb65d), // Thrustmaster Wheel FFB
     MAKE_VIDPID(0x044f, 0xb65e), // Thrustmaster T500RS
@@ -611,7 +611,7 @@ static SDL_vidpid_list wheel_devices = {
     false
 };
 
-static Uint32 initial_guitar_devices[] = {
+static const Uint32 initial_guitar_devices[] = {
 	MAKE_VIDPID(0x12ba, 0x0100), // PS3 Guitar Hero Guitar
 	MAKE_VIDPID(0x12ba, 0x0200), // PS3 Rock Band Guitar
 	MAKE_VIDPID(0x12ba, 0x074b), // PS3 / Wii U Guitar Hero Live Guitar
@@ -640,7 +640,7 @@ static SDL_vidpid_list guitar_devices = {
     false
 };
 
-static Uint32 initial_drum_devices[] = {
+static const Uint32 initial_drum_devices[] = {
 	MAKE_VIDPID(0x12ba, 0x0120), // PS3 Guitar Hero Drums
 	MAKE_VIDPID(0x12ba, 0x0210), // PS3 Rock Band Drums
 	MAKE_VIDPID(0x12ba, 0x0218), // PS3 Midi Pro Adapter - Drums Mode
@@ -660,7 +660,7 @@ static SDL_vidpid_list drum_devices = {
     false
 };
 
-static Uint32 initial_zero_centered_devices[] = {
+static const Uint32 initial_zero_centered_devices[] = {
     MAKE_VIDPID(0x05a0, 0x3232), // 8Bitdo Zero Gamepad
     MAKE_VIDPID(0x0e8f, 0x3013), // HuiJia SNES USB adapter
 };
@@ -759,7 +759,7 @@ void SDL_AssertJoysticksLocked(void)
  * Get the driver and device index for a joystick instance ID
  * This should be called while the joystick lock is held, to prevent another thread from updating the list
  */
-static bool SDL_GetDriverAndJoystickIndex(SDL_JoystickID instance_id, SDL_JoystickDriver **driver, int *driver_index)
+static bool SDL_GetDriverAndJoystickIndex(SDL_JoystickID instance_id, const SDL_JoystickDriver **driver, int *driver_index)
 {
     int i, num_joysticks, device_index;
 
@@ -827,7 +827,7 @@ static SDL_JoystickID SDL_GetJoystickIDForPlayerIndex(int player_index)
 static bool SDL_SetJoystickIDForPlayerIndex(int player_index, SDL_JoystickID instance_id)
 {
     SDL_JoystickID existing_instance = SDL_GetJoystickIDForPlayerIndex(player_index);
-    SDL_JoystickDriver *driver;
+    const SDL_JoystickDriver *driver;
     int device_index;
     int existing_player_index;
 
@@ -949,7 +949,7 @@ bool SDL_JoysticksOpened(void)
     return opened;
 }
 
-bool SDL_JoystickHandledByAnotherDriver(struct SDL_JoystickDriver *driver, Uint16 vendor_id, Uint16 product_id, Uint16 version, const char *name)
+bool SDL_JoystickHandledByAnotherDriver(const struct SDL_JoystickDriver *driver, Uint16 vendor_id, Uint16 product_id, Uint16 version, const char *name)
 {
     int i;
     bool result = false;
@@ -1033,7 +1033,7 @@ SDL_JoystickID *SDL_GetJoysticks(int *count)
 
 const SDL_SteamVirtualGamepadInfo *SDL_GetJoystickVirtualGamepadInfoForID(SDL_JoystickID instance_id)
 {
-    SDL_JoystickDriver *driver;
+    const SDL_JoystickDriver *driver;
     int device_index;
     const SDL_SteamVirtualGamepadInfo *info = NULL;
 
@@ -1049,7 +1049,7 @@ const SDL_SteamVirtualGamepadInfo *SDL_GetJoystickVirtualGamepadInfoForID(SDL_Jo
  */
 static const char *SDL_UpdateJoystickNameForID(SDL_JoystickID instance_id)
 {
-    SDL_JoystickDriver *driver;
+    const SDL_JoystickDriver *driver;
     int device_index;
     const char *current_name = NULL;
     const SDL_SteamVirtualGamepadInfo *info;
@@ -1105,7 +1105,7 @@ const char *SDL_GetJoystickNameForID(SDL_JoystickID instance_id)
  */
 const char *SDL_GetJoystickPathForID(SDL_JoystickID instance_id)
 {
-    SDL_JoystickDriver *driver;
+    const SDL_JoystickDriver *driver;
     int device_index;
     const char *path = NULL;
 
@@ -1381,7 +1381,7 @@ static bool ShouldSwapFaceButtons(const SDL_SteamVirtualGamepadInfo *info)
  */
 SDL_Joystick *SDL_OpenJoystick(SDL_JoystickID instance_id)
 {
-    SDL_JoystickDriver *driver;
+    const SDL_JoystickDriver *driver;
     int device_index;
     SDL_Joystick *joystick;
     SDL_Joystick *joysticklist;
@@ -1559,7 +1559,7 @@ bool SDL_DetachVirtualJoystick(SDL_JoystickID instance_id)
 bool SDL_IsJoystickVirtual(SDL_JoystickID instance_id)
 {
 #ifdef SDL_JOYSTICK_VIRTUAL
-    SDL_JoystickDriver *driver;
+    const SDL_JoystickDriver *driver;
     int device_index;
     bool is_virtual = false;
 
@@ -1708,7 +1708,7 @@ bool SDL_IsJoystickValid(SDL_Joystick *joystick)
 
 bool SDL_PrivateJoystickGetAutoGamepadMapping(SDL_JoystickID instance_id, SDL_GamepadMapping *out)
 {
-    SDL_JoystickDriver *driver;
+    const SDL_JoystickDriver *driver;
     int device_index;
     bool is_ok = false;
 
@@ -2435,7 +2435,7 @@ void SDL_PrivateJoystickSensorRate(SDL_Joystick *joystick, SDL_SensorType type, 
 
 void SDL_PrivateJoystickAdded(SDL_JoystickID instance_id)
 {
-    SDL_JoystickDriver *driver;
+    const SDL_JoystickDriver *driver;
     int device_index;
     int player_index = -1;
     bool is_gamepad;
@@ -3564,7 +3564,7 @@ bool SDL_ShouldIgnoreJoystick(Uint16 vendor_id, Uint16 product_id, Uint16 versio
 // return the guid for this index
 SDL_GUID SDL_GetJoystickGUIDForID(SDL_JoystickID instance_id)
 {
-    SDL_JoystickDriver *driver;
+    const SDL_JoystickDriver *driver;
     int device_index;
     SDL_GUID guid;
 

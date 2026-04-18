@@ -80,7 +80,7 @@ struct hid_device_ {
 	struct hid_device_info* device_info;
 };
 
-static struct hid_api_version api_version = {
+static const struct hid_api_version api_version = {
 	.major = HID_API_VERSION_MAJOR,
 	.minor = HID_API_VERSION_MINOR,
 	.patch = HID_API_VERSION_PATCH

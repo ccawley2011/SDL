@@ -13688,7 +13688,7 @@ static SDL_GPUDevice *VULKAN_CreateDevice(bool debugMode, bool preferLowPower, S
     return result;
 }
 
-SDL_GPUBootstrap VulkanDriver = {
+const SDL_GPUBootstrap VulkanDriver = {
     "vulkan",
     VULKAN_PrepareDriver,
     VULKAN_CreateDevice

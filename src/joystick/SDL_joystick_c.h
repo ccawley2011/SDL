@@ -54,7 +54,7 @@ extern void SDL_AssertJoysticksLocked(void) SDL_ASSERT_CAPABILITY(SDL_joystick_l
 extern bool SDL_JoysticksOpened(void);
 
 // Function to determine whether a device is currently detected by this driver
-extern bool SDL_JoystickHandledByAnotherDriver(struct SDL_JoystickDriver *driver, Uint16 vendor_id, Uint16 product_id, Uint16 version, const char *name);
+extern bool SDL_JoystickHandledByAnotherDriver(const struct SDL_JoystickDriver *driver, Uint16 vendor_id, Uint16 product_id, Uint16 version, const char *name);
 
 /* Function to standardize the name for a controller
    This should be freed with SDL_free() when no longer needed
@@ -270,7 +270,7 @@ typedef struct
     Uint32 *excluded_entries;
 
     int num_initial_entries;
-    Uint32 *initial_entries;
+    const Uint32 *initial_entries;
 
     bool initialized;
 } SDL_vidpid_list;

@@ -1853,7 +1853,7 @@ static bool GPU_CreateRenderer(SDL_Renderer *renderer, SDL_Window *window, SDL_P
     return true;
 }
 
-SDL_RenderDriver GPU_RenderDriver = {
+const SDL_RenderDriver GPU_RenderDriver = {
     GPU_CreateRenderer, "gpu"
 };
 

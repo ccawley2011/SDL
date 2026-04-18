@@ -1579,7 +1579,7 @@ typedef struct WaveExtensibleGUID
     {                                                                                \
         (tag) & 0xff, (tag) >> 8, 0, 0, 0, 0, 16, 0, 128, 0, 0, 170, 0, 56, 155, 113 \
     }
-static WaveExtensibleGUID extensible_guids[] = {
+static const WaveExtensibleGUID extensible_guids[] = {
     { PCM_CODE, WAVE_FORMATTAG_GUID(PCM_CODE) },
     { MS_ADPCM_CODE, WAVE_FORMATTAG_GUID(MS_ADPCM_CODE) },
     { IEEE_FLOAT_CODE, WAVE_FORMATTAG_GUID(IEEE_FLOAT_CODE) },

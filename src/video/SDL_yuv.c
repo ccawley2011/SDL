@@ -675,7 +675,7 @@ struct RGB2YUVFactors
     float v[3]; // Rfactor, Gfactor, Bfactor
 };
 
-static struct RGB2YUVFactors RGB2YUVFactorTables[] = {
+static const struct RGB2YUVFactors RGB2YUVFactorTables[] = {
     // ITU-T T.871 (JPEG)
     {
         0,

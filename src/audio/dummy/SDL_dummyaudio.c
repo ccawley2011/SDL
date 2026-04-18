@@ -127,6 +127,6 @@ static bool DUMMYAUDIO_Init(SDL_AudioDriverImpl *impl)
     return true;
 }
 
-AudioBootStrap DUMMYAUDIO_bootstrap = {
+const AudioBootStrap DUMMYAUDIO_bootstrap = {
     "dummy", "SDL dummy audio driver", DUMMYAUDIO_Init, true, false
 };

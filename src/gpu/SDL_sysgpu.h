@@ -1228,10 +1228,10 @@ typedef struct SDL_GPUBootstrap
 extern "C" {
 #endif
 
-extern SDL_GPUBootstrap VulkanDriver;
-extern SDL_GPUBootstrap D3D12Driver;
-extern SDL_GPUBootstrap MetalDriver;
-extern SDL_GPUBootstrap PrivateGPUDriver;
+extern const SDL_GPUBootstrap VulkanDriver;
+extern const SDL_GPUBootstrap D3D12Driver;
+extern const SDL_GPUBootstrap MetalDriver;
+extern const SDL_GPUBootstrap PrivateGPUDriver;
 
 #ifdef __cplusplus
 }

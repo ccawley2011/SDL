@@ -205,7 +205,7 @@
 #define COPYPASS_DEVICE \
     ((CommandBufferCommonHeader *)COPYPASS_COMMAND_BUFFER)->device
 
-static bool TextureFormatIsComputeWritable[] = {
+static const bool TextureFormatIsComputeWritable[] = {
     false, // INVALID
     false, // A8_UNORM
     true,  // R8_UNORM
@@ -316,7 +316,7 @@ static bool TextureFormatIsComputeWritable[] = {
 // Drivers
 
 #ifndef SDL_GPU_DISABLED
-static const SDL_GPUBootstrap *backends[] = {
+static const SDL_GPUBootstrap *const backends[] = {
 #ifdef SDL_GPU_PRIVATE
     &PrivateGPUDriver,
 #endif

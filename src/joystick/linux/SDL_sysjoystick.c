@@ -2821,7 +2821,7 @@ done:
     return result;
 }
 
-SDL_JoystickDriver SDL_LINUX_JoystickDriver = {
+const SDL_JoystickDriver SDL_LINUX_JoystickDriver = {
     LINUX_JoystickInit,
     LINUX_JoystickGetCount,
     LINUX_JoystickDetect,

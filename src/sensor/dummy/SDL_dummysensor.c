@@ -76,7 +76,7 @@ static void SDL_DUMMY_SensorQuit(void)
 {
 }
 
-SDL_SensorDriver SDL_DUMMY_SensorDriver = {
+const SDL_SensorDriver SDL_DUMMY_SensorDriver = {
     SDL_DUMMY_SensorInit,
     SDL_DUMMY_SensorGetCount,
     SDL_DUMMY_SensorDetect,

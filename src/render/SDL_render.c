@@ -107,7 +107,7 @@ this should probably be removed at some point in the future.  --ryan. */
                           SDL_BLENDFACTOR_ZERO, SDL_BLENDFACTOR_ONE, SDL_BLENDOPERATION_ADD)
 
 #ifndef SDL_RENDER_DISABLED
-static const SDL_RenderDriver *render_drivers[] = {
+static const SDL_RenderDriver *const render_drivers[] = {
 #ifdef SDL_VIDEO_RENDER_D3D11
     &D3D11_RenderDriver,
 #endif

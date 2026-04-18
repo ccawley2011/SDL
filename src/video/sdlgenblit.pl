@@ -139,7 +139,7 @@ __EOF__
 sub output_copydefs
 {
     print FILE <<__EOF__;
-extern SDL_BlitFuncEntry SDL_GeneratedBlitFuncTable[];
+extern const SDL_BlitFuncEntry SDL_GeneratedBlitFuncTable[];
 __EOF__
 }
 
@@ -663,7 +663,7 @@ __EOF__
 sub output_copyfunctable
 {
     print FILE <<__EOF__;
-SDL_BlitFuncEntry SDL_GeneratedBlitFuncTable[] = {
+const SDL_BlitFuncEntry SDL_GeneratedBlitFuncTable[] = {
 __EOF__
     for (my $i = 0; $i <= $#src_formats; ++$i) {
         my $src = $src_formats[$i];

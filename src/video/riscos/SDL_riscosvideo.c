@@ -93,7 +93,7 @@ static SDL_VideoDevice *RISCOS_CreateDevice(void)
     return device;
 }
 
-VideoBootStrap RISCOS_bootstrap = {
+const VideoBootStrap RISCOS_bootstrap = {
     RISCOSVID_DRIVER_NAME, "SDL RISC OS video driver",
     RISCOS_CreateDevice,
     RISCOS_ShowMessageBox,

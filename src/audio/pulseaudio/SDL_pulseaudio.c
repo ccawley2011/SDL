@@ -1105,7 +1105,7 @@ static bool PULSEAUDIO_Init(SDL_AudioDriverImpl *impl)
     return true;
 }
 
-AudioBootStrap PULSEAUDIO_bootstrap = {
+const AudioBootStrap PULSEAUDIO_bootstrap = {
     "pulseaudio", "PulseAudio", PULSEAUDIO_Init, false, false
 };
 

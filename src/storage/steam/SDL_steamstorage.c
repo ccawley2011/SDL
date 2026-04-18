@@ -323,7 +323,7 @@ steamfail:
     return NULL;
 }
 
-UserStorageBootStrap STEAM_userbootstrap = {
+const UserStorageBootStrap STEAM_userbootstrap = {
     "steam",
     "SDL Steam user storage driver",
     STEAM_User_Create

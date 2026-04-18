@@ -39,7 +39,7 @@ struct SDL_Sensor
 
     float data[16] _guarded;             // The current state of the sensor
 
-    struct SDL_SensorDriver *driver _guarded;
+    const struct SDL_SensorDriver *driver _guarded;
 
     struct sensor_hwdata *hwdata _guarded; // Driver dependent information
 
@@ -100,12 +100,12 @@ typedef struct SDL_SensorDriver
 } SDL_SensorDriver;
 
 // The available sensor drivers
-extern SDL_SensorDriver SDL_ANDROID_SensorDriver;
-extern SDL_SensorDriver SDL_COREMOTION_SensorDriver;
-extern SDL_SensorDriver SDL_WINDOWS_SensorDriver;
-extern SDL_SensorDriver SDL_DUMMY_SensorDriver;
-extern SDL_SensorDriver SDL_VITA_SensorDriver;
-extern SDL_SensorDriver SDL_N3DS_SensorDriver;
-extern SDL_SensorDriver SDL_EMSCRIPTEN_SensorDriver;
+extern const SDL_SensorDriver SDL_ANDROID_SensorDriver;
+extern const SDL_SensorDriver SDL_COREMOTION_SensorDriver;
+extern const SDL_SensorDriver SDL_WINDOWS_SensorDriver;
+extern const SDL_SensorDriver SDL_DUMMY_SensorDriver;
+extern const SDL_SensorDriver SDL_VITA_SensorDriver;
+extern const SDL_SensorDriver SDL_N3DS_SensorDriver;
+extern const SDL_SensorDriver SDL_EMSCRIPTEN_SensorDriver;
 
 #endif // SDL_syssensor_h_

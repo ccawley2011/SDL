@@ -4632,7 +4632,7 @@ static bool VULKAN_CreateRenderer(SDL_Renderer *renderer, SDL_Window *window, SD
     return true;
 }
 
-SDL_RenderDriver VULKAN_RenderDriver = {
+const SDL_RenderDriver VULKAN_RenderDriver = {
     VULKAN_CreateRenderer, "vulkan"
 };
 

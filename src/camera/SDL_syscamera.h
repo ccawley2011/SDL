@@ -217,13 +217,13 @@ typedef struct CameraBootStrap
 } CameraBootStrap;
 
 // Not all of these are available in a given build. Use #ifdefs, etc.
-extern CameraBootStrap DUMMYCAMERA_bootstrap;
-extern CameraBootStrap PIPEWIRECAMERA_bootstrap;
-extern CameraBootStrap V4L2_bootstrap;
-extern CameraBootStrap COREMEDIA_bootstrap;
-extern CameraBootStrap ANDROIDCAMERA_bootstrap;
-extern CameraBootStrap EMSCRIPTENCAMERA_bootstrap;
-extern CameraBootStrap MEDIAFOUNDATION_bootstrap;
-extern CameraBootStrap VITACAMERA_bootstrap;
+extern const CameraBootStrap DUMMYCAMERA_bootstrap;
+extern const CameraBootStrap PIPEWIRECAMERA_bootstrap;
+extern const CameraBootStrap V4L2_bootstrap;
+extern const CameraBootStrap COREMEDIA_bootstrap;
+extern const CameraBootStrap ANDROIDCAMERA_bootstrap;
+extern const CameraBootStrap EMSCRIPTENCAMERA_bootstrap;
+extern const CameraBootStrap MEDIAFOUNDATION_bootstrap;
+extern const CameraBootStrap VITACAMERA_bootstrap;
 
 #endif // SDL_syscamera_h_

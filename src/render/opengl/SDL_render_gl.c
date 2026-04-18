@@ -2055,7 +2055,7 @@ error:
     return false;
 }
 
-SDL_RenderDriver GL_RenderDriver = {
+const SDL_RenderDriver GL_RenderDriver = {
     GL_CreateRenderer, "opengl"
 };
 

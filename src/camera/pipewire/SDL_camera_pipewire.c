@@ -1168,7 +1168,7 @@ static bool PIPEWIRECAMERA_Init(SDL_CameraDriverImpl *impl)
     return true;
 }
 
-CameraBootStrap PIPEWIRECAMERA_bootstrap = {
+const CameraBootStrap PIPEWIRECAMERA_bootstrap = {
     "pipewire", "SDL PipeWire camera driver", PIPEWIRECAMERA_Init, false
 };
 

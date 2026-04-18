@@ -1244,7 +1244,7 @@ static bool SW_CreateRenderer(SDL_Renderer *renderer, SDL_Window *window, SDL_Pr
     return true;
 }
 
-SDL_RenderDriver SW_RenderDriver = {
+const SDL_RenderDriver SW_RenderDriver = {
     SW_CreateRenderer, SDL_SOFTWARE_RENDERER
 };
 

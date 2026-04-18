@@ -365,30 +365,30 @@ typedef struct AudioBootStrap
 } AudioBootStrap;
 
 // Not all of these are available in a given build. Use #ifdefs, etc.
-extern AudioBootStrap PRIVATEAUDIO_bootstrap;
-extern AudioBootStrap PIPEWIRE_PREFERRED_bootstrap;
-extern AudioBootStrap PIPEWIRE_bootstrap;
-extern AudioBootStrap PULSEAUDIO_bootstrap;
-extern AudioBootStrap ALSA_bootstrap;
-extern AudioBootStrap JACK_bootstrap;
-extern AudioBootStrap SNDIO_bootstrap;
-extern AudioBootStrap NETBSDAUDIO_bootstrap;
-extern AudioBootStrap DSP_bootstrap;
-extern AudioBootStrap WASAPI_bootstrap;
-extern AudioBootStrap DSOUND_bootstrap;
-extern AudioBootStrap WINMM_bootstrap;
-extern AudioBootStrap HAIKUAUDIO_bootstrap;
-extern AudioBootStrap COREAUDIO_bootstrap;
-extern AudioBootStrap DISKAUDIO_bootstrap;
-extern AudioBootStrap DUMMYAUDIO_bootstrap;
-extern AudioBootStrap AAUDIO_bootstrap;
-extern AudioBootStrap OPENSLES_bootstrap;
-extern AudioBootStrap PS2AUDIO_bootstrap;
-extern AudioBootStrap PSPAUDIO_bootstrap;
-extern AudioBootStrap VITAAUD_bootstrap;
-extern AudioBootStrap N3DSAUDIO_bootstrap;
-extern AudioBootStrap NGAGEAUDIO_bootstrap;
-extern AudioBootStrap EMSCRIPTENAUDIO_bootstrap;
-extern AudioBootStrap QSAAUDIO_bootstrap;
+extern const AudioBootStrap PRIVATEAUDIO_bootstrap;
+extern const AudioBootStrap PIPEWIRE_PREFERRED_bootstrap;
+extern const AudioBootStrap PIPEWIRE_bootstrap;
+extern const AudioBootStrap PULSEAUDIO_bootstrap;
+extern const AudioBootStrap ALSA_bootstrap;
+extern const AudioBootStrap JACK_bootstrap;
+extern const AudioBootStrap SNDIO_bootstrap;
+extern const AudioBootStrap NETBSDAUDIO_bootstrap;
+extern const AudioBootStrap DSP_bootstrap;
+extern const AudioBootStrap WASAPI_bootstrap;
+extern const AudioBootStrap DSOUND_bootstrap;
+extern const AudioBootStrap WINMM_bootstrap;
+extern const AudioBootStrap HAIKUAUDIO_bootstrap;
+extern const AudioBootStrap COREAUDIO_bootstrap;
+extern const AudioBootStrap DISKAUDIO_bootstrap;
+extern const AudioBootStrap DUMMYAUDIO_bootstrap;
+extern const AudioBootStrap AAUDIO_bootstrap;
+extern const AudioBootStrap OPENSLES_bootstrap;
+extern const AudioBootStrap PS2AUDIO_bootstrap;
+extern const AudioBootStrap PSPAUDIO_bootstrap;
+extern const AudioBootStrap VITAAUD_bootstrap;
+extern const AudioBootStrap N3DSAUDIO_bootstrap;
+extern const AudioBootStrap NGAGEAUDIO_bootstrap;
+extern const AudioBootStrap EMSCRIPTENAUDIO_bootstrap;
+extern const AudioBootStrap QSAAUDIO_bootstrap;
 
 #endif // SDL_sysaudio_h_

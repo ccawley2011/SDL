@@ -27,7 +27,7 @@
 #include "../events/SDL_events_c.h"
 #include "../joystick/SDL_gamepad_c.h"
 
-static SDL_SensorDriver *SDL_sensor_drivers[] = {
+static const SDL_SensorDriver *const SDL_sensor_drivers[] = {
 #ifdef SDL_SENSOR_ANDROID
     &SDL_ANDROID_SensorDriver,
 #endif
@@ -218,7 +218,7 @@ SDL_SensorID *SDL_GetSensors(int *count)
  * Get the driver and device index for a sensor instance ID
  * This should be called while the sensor lock is held, to prevent another thread from updating the list
  */
-static bool SDL_GetDriverAndSensorIndex(SDL_SensorID instance_id, SDL_SensorDriver **driver, int *driver_index)
+static bool SDL_GetDriverAndSensorIndex(SDL_SensorID instance_id, const SDL_SensorDriver **driver, int *driver_index)
 {
     int i, num_sensors, device_index;
 
@@ -244,7 +244,7 @@ static bool SDL_GetDriverAndSensorIndex(SDL_SensorID instance_id, SDL_SensorDriv
  */
 const char *SDL_GetSensorNameForID(SDL_SensorID instance_id)
 {
-    SDL_SensorDriver *driver;
+    const SDL_SensorDriver *driver;
     int device_index;
     const char *name = NULL;
 
@@ -259,7 +259,7 @@ const char *SDL_GetSensorNameForID(SDL_SensorID instance_id)
 
 SDL_SensorType SDL_GetSensorTypeForID(SDL_SensorID instance_id)
 {
-    SDL_SensorDriver *driver;
+    const SDL_SensorDriver *driver;
     int device_index;
     SDL_SensorType type = SDL_SENSOR_INVALID;
 
@@ -274,7 +274,7 @@ SDL_SensorType SDL_GetSensorTypeForID(SDL_SensorID instance_id)
 
 int SDL_GetSensorNonPortableTypeForID(SDL_SensorID instance_id)
 {
-    SDL_SensorDriver *driver;
+    const SDL_SensorDriver *driver;
     int device_index;
     int type = -1;
 
@@ -296,7 +296,7 @@ int SDL_GetSensorNonPortableTypeForID(SDL_SensorID instance_id)
  */
 SDL_Sensor *SDL_OpenSensor(SDL_SensorID instance_id)
 {
-    SDL_SensorDriver *driver;
+    const SDL_SensorDriver *driver;
     int device_index;
     SDL_Sensor *sensor;
     SDL_Sensor *sensorlist;

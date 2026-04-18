@@ -2512,7 +2512,7 @@ error:
     return false;
 }
 
-SDL_RenderDriver GLES2_RenderDriver = {
+const SDL_RenderDriver GLES2_RenderDriver = {
     GLES2_CreateRenderer, "opengles2"
 };
 

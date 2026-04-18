@@ -296,7 +296,7 @@ static bool DSP_Init(SDL_AudioDriverImpl *impl)
     return true;
 }
 
-AudioBootStrap DSP_bootstrap = {
+const AudioBootStrap DSP_bootstrap = {
     "dsp", "Open Sound System (/dev/dsp)", DSP_Init, false, false
 };
 

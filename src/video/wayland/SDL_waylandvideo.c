@@ -776,14 +776,14 @@ static SDL_VideoDevice *Wayland_Fallback_CreateDevice(void)
     return Wayland_CreateDevice(false);
 }
 
-VideoBootStrap Wayland_preferred_bootstrap = {
+const VideoBootStrap Wayland_preferred_bootstrap = {
     WAYLANDVID_DRIVER_NAME, "SDL Wayland video driver",
     Wayland_Preferred_CreateDevice,
     Wayland_ShowMessageBox,
     true
 };
 
-VideoBootStrap Wayland_bootstrap = {
+const VideoBootStrap Wayland_bootstrap = {
     WAYLANDVID_DRIVER_NAME, "SDL Wayland video driver",
     Wayland_Fallback_CreateDevice,
     Wayland_ShowMessageBox,

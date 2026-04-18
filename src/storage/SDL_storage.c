@@ -25,13 +25,13 @@
 #include "../filesystem/SDL_sysfilesystem.h"
 
 // Available title storage drivers
-static TitleStorageBootStrap *titlebootstrap[] = {
+static const TitleStorageBootStrap *const titlebootstrap[] = {
     &GENERIC_titlebootstrap,
     NULL
 };
 
 // Available user storage drivers
-static UserStorageBootStrap *userbootstrap[] = {
+static const UserStorageBootStrap *const userbootstrap[] = {
 #ifdef SDL_STORAGE_STEAM
     &STEAM_userbootstrap,
 #endif

@@ -129,7 +129,7 @@ static bool DUMMY_JoystickGetGamepadMapping(int device_index, SDL_GamepadMapping
     return false;
 }
 
-SDL_JoystickDriver SDL_DUMMY_JoystickDriver = {
+const SDL_JoystickDriver SDL_DUMMY_JoystickDriver = {
     DUMMY_JoystickInit,
     DUMMY_JoystickGetCount,
     DUMMY_JoystickDetect,

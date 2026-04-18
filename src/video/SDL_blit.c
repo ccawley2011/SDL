@@ -132,7 +132,7 @@ static bool SDL_UseAltivecPrefetch(void)
 #endif // SDL_PLATFORM_MACOS
 
 static SDL_BlitFunc SDL_ChooseBlitFunc(SDL_PixelFormat src_format, SDL_PixelFormat dst_format, int flags,
-                                       SDL_BlitFuncEntry *entries)
+                                       const SDL_BlitFuncEntry *entries)
 {
     int i, flagcheck = (flags & (SDL_COPY_MODULATE_MASK | SDL_COPY_BLEND_MASK | SDL_COPY_COLORKEY | SDL_COPY_NEAREST));
     static unsigned int features = 0x7fffffff;

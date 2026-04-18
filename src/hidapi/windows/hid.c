@@ -81,7 +81,7 @@ typedef LONG NTSTATUS;
 
 #define MAX_STRING_WCHARS_USB 126
 
-static struct hid_api_version api_version = {
+static const struct hid_api_version api_version = {
 	.major = HID_API_VERSION_MAJOR,
 	.minor = HID_API_VERSION_MINOR,
 	.patch = HID_API_VERSION_PATCH

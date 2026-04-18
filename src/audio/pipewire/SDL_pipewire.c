@@ -1418,10 +1418,10 @@ static bool PIPEWIRE_Init(SDL_AudioDriverImpl *impl)
     return PipewireInitialize(impl);
 }
 
-AudioBootStrap PIPEWIRE_PREFERRED_bootstrap = {
+const AudioBootStrap PIPEWIRE_PREFERRED_bootstrap = {
     "pipewire", "Pipewire", PIPEWIRE_PREFERRED_Init, false, true
 };
-AudioBootStrap PIPEWIRE_bootstrap = {
+const AudioBootStrap PIPEWIRE_bootstrap = {
     "pipewire", "Pipewire", PIPEWIRE_Init, false, false
 };
 

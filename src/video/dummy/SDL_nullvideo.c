@@ -120,7 +120,7 @@ static SDL_VideoDevice *DUMMY_CreateDevice(void)
     return DUMMY_InternalCreateDevice(DUMMYVID_DRIVER_NAME);
 }
 
-VideoBootStrap DUMMY_bootstrap = {
+const VideoBootStrap DUMMY_bootstrap = {
     DUMMYVID_DRIVER_NAME, "SDL dummy video driver",
     DUMMY_CreateDevice,
     NULL, // no ShowMessageBox implementation
@@ -161,7 +161,7 @@ static SDL_VideoDevice *DUMMY_EVDEV_CreateDevice(void)
     return device;
 }
 
-VideoBootStrap DUMMY_evdev_bootstrap = {
+const VideoBootStrap DUMMY_evdev_bootstrap = {
     DUMMYVID_DRIVER_EVDEV_NAME, "SDL dummy video driver with evdev",
     DUMMY_EVDEV_CreateDevice,
     NULL, // no ShowMessageBox implementation

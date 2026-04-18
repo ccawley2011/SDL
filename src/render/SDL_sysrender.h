@@ -376,19 +376,19 @@ struct SDL_RenderDriver
 };
 
 // Not all of these are available in a given build. Use #ifdefs, etc.
-extern SDL_RenderDriver D3D_RenderDriver;
-extern SDL_RenderDriver D3D11_RenderDriver;
-extern SDL_RenderDriver D3D12_RenderDriver;
-extern SDL_RenderDriver GL_RenderDriver;
-extern SDL_RenderDriver GLES2_RenderDriver;
-extern SDL_RenderDriver METAL_RenderDriver;
-extern SDL_RenderDriver NGAGE_RenderDriver;
-extern SDL_RenderDriver VULKAN_RenderDriver;
-extern SDL_RenderDriver PS2_RenderDriver;
-extern SDL_RenderDriver PSP_RenderDriver;
-extern SDL_RenderDriver SW_RenderDriver;
-extern SDL_RenderDriver VITA_GXM_RenderDriver;
-extern SDL_RenderDriver GPU_RenderDriver;
+extern const SDL_RenderDriver D3D_RenderDriver;
+extern const SDL_RenderDriver D3D11_RenderDriver;
+extern const SDL_RenderDriver D3D12_RenderDriver;
+extern const SDL_RenderDriver GL_RenderDriver;
+extern const SDL_RenderDriver GLES2_RenderDriver;
+extern const SDL_RenderDriver METAL_RenderDriver;
+extern const SDL_RenderDriver NGAGE_RenderDriver;
+extern const SDL_RenderDriver VULKAN_RenderDriver;
+extern const SDL_RenderDriver PS2_RenderDriver;
+extern const SDL_RenderDriver PSP_RenderDriver;
+extern const SDL_RenderDriver SW_RenderDriver;
+extern const SDL_RenderDriver VITA_GXM_RenderDriver;
+extern const SDL_RenderDriver GPU_RenderDriver;
 
 // Clean up any renderers at shutdown
 extern void SDL_QuitRender(void);
