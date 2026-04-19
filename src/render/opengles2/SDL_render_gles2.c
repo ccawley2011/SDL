@@ -189,6 +189,7 @@ typedef struct GLES2_RenderData
 
     bool GL_OES_EGL_image_external_supported;
     bool GL_EXT_blend_minmax_supported;
+    bool GL_EXT_texture_format_BGRA8888_supported;
 
 #define SDL_PROC(ret, func, params) ret (APIENTRY *func) params;
 #include "SDL_gles2funcs.h"
@@ -299,6 +300,14 @@ static bool GLES2_LoadFunctions(GLES2_RenderData *data)
 #include "SDL_gles2funcs.h"
 #undef SDL_PROC
     return true;
+}
+
+static bool GLES2_NeedColorSwap(SDL_Texture *target)
+{
+    GLES2_TextureData *tdata = target ? (GLES2_TextureData *)target->internal : NULL;
+    if (tdata && tdata->pixel_format == GL_BGRA_EXT)
+        return false;
+    return (target && (target->format == SDL_PIXELFORMAT_BGRA32 || target->format == SDL_PIXELFORMAT_BGRX32));
 }
 
 static GLES2_FBOList *GLES2_GetFBO(GLES2_RenderData *data, Uint32 w, Uint32 h)
@@ -633,7 +642,7 @@ static bool GLES2_SelectProgram(GLES2_RenderData *data, SDL_Texture *texture, GL
     GLES2_ShaderType vtype, ftype;
     GLES2_ProgramCacheEntry *program;
     GLES2_TextureData *tdata = texture ? (GLES2_TextureData *)texture->internal : NULL;
-    const bool colorswap = (data->drawstate.target && (data->drawstate.target->format == SDL_PIXELFORMAT_BGRA32 || data->drawstate.target->format == SDL_PIXELFORMAT_BGRX32));
+    const bool colorswap = GLES2_NeedColorSwap(data->drawstate.target);
     const float *shader_params = NULL;
     int shader_params_len = 0;
 
@@ -849,7 +858,7 @@ static bool GLES2_QueueNoOp(SDL_Renderer *renderer, SDL_RenderCommand *cmd)
 
 static bool GLES2_QueueDrawPoints(SDL_Renderer *renderer, SDL_RenderCommand *cmd, const SDL_FPoint *points, int count)
 {
-    const bool colorswap = (renderer->target && (renderer->target->format == SDL_PIXELFORMAT_BGRA32 || renderer->target->format == SDL_PIXELFORMAT_BGRX32));
+    const bool colorswap = GLES2_NeedColorSwap(renderer->target);
     SDL_VertexSolid *verts = (SDL_VertexSolid *)SDL_AllocateRenderVertices(renderer, count * sizeof(*verts), 0, &cmd->data.draw.first);
     int i;
     SDL_FColor color = cmd->data.draw.color;
@@ -882,7 +891,7 @@ static bool GLES2_QueueDrawPoints(SDL_Renderer *renderer, SDL_RenderCommand *cmd
 
 static bool GLES2_QueueDrawLines(SDL_Renderer *renderer, SDL_RenderCommand *cmd, const SDL_FPoint *points, int count)
 {
-    const bool colorswap = (renderer->target && (renderer->target->format == SDL_PIXELFORMAT_BGRA32 || renderer->target->format == SDL_PIXELFORMAT_BGRX32));
+    const bool colorswap = GLES2_NeedColorSwap(renderer->target);
     int i;
     GLfloat prevx, prevy;
     SDL_VertexSolid *verts = (SDL_VertexSolid *)SDL_AllocateRenderVertices(renderer, count * sizeof(*verts), 0, &cmd->data.draw.first);
@@ -943,7 +952,7 @@ static bool GLES2_QueueGeometry(SDL_Renderer *renderer, SDL_RenderCommand *cmd, 
                                float scale_x, float scale_y)
 {
     int i;
-    const bool colorswap = (renderer->target && (renderer->target->format == SDL_PIXELFORMAT_BGRA32 || renderer->target->format == SDL_PIXELFORMAT_BGRX32));
+    const bool colorswap = GLES2_NeedColorSwap(renderer->target);
     int count = indices ? num_indices : num_vertices;
     const float color_scale = cmd->data.draw.color_scale;
 
@@ -1220,8 +1229,11 @@ static bool SetCopyState(SDL_Renderer *renderer, const SDL_RenderCommand *cmd, v
                 case SDL_PIXELFORMAT_RGB565:
                 case SDL_PIXELFORMAT_RGBA5551:
                 case SDL_PIXELFORMAT_RGBA4444:
-                    sourceType = GLES2_IMAGESOURCE_TEXTURE_COLORSWAP;
-                    break;
+                    if (GLES2_NeedColorSwap(texture)) {
+                        sourceType = GLES2_IMAGESOURCE_TEXTURE_COLORSWAP;
+                        break;
+                    }
+                    SDL_FALLTHROUGH;
                 case SDL_PIXELFORMAT_BGRX32:
                     sourceType = GLES2_IMAGESOURCE_TEXTURE;
                     break;
@@ -1236,8 +1248,11 @@ static bool SetCopyState(SDL_Renderer *renderer, const SDL_RenderCommand *cmd, v
                 switch (renderer->target->format) {
                 case SDL_PIXELFORMAT_BGRA32:
                 case SDL_PIXELFORMAT_BGRX32:
-                    sourceType = GLES2_IMAGESOURCE_TEXTURE_COLORSWAP;
-                    break;
+                    if (GLES2_NeedColorSwap(renderer->target)) {
+                        sourceType = GLES2_IMAGESOURCE_TEXTURE_COLORSWAP;
+                        break;
+                    }
+                    SDL_FALLTHROUGH;
                 case SDL_PIXELFORMAT_RGBX32:
                     sourceType = GLES2_IMAGESOURCE_TEXTURE;
                     break;
@@ -1251,33 +1266,47 @@ static bool SetCopyState(SDL_Renderer *renderer, const SDL_RenderCommand *cmd, v
                 case SDL_PIXELFORMAT_RGB565:
                 case SDL_PIXELFORMAT_RGBA5551:
                 case SDL_PIXELFORMAT_RGBA4444:
-                    sourceType = GLES2_IMAGESOURCE_TEXTURE_COLORSWAP;
-                    break;
+                    if (GLES2_NeedColorSwap(texture)) {
+                        sourceType = GLES2_IMAGESOURCE_TEXTURE_COLORSWAP;
+                        break;
+                    }
+                    SDL_FALLTHROUGH;
                 case SDL_PIXELFORMAT_BGRA32:
                     sourceType = GLES2_IMAGESOURCE_TEXTURE_OPAQUE;
                     break;
                 case SDL_PIXELFORMAT_RGBX32:
-                    sourceType = GLES2_IMAGESOURCE_TEXTURE_COLORSWAP;
-                    break;
+                    if (GLES2_NeedColorSwap(texture)) {
+                        sourceType = GLES2_IMAGESOURCE_TEXTURE_COLORSWAP;
+                        break;
+                    }
+                    SDL_FALLTHROUGH;
                 default:
+                    sourceType = GLES2_IMAGESOURCE_TEXTURE;
                     break;
                 }
                 break;
             case SDL_PIXELFORMAT_RGBX32:
                 switch (renderer->target->format) {
+                case SDL_PIXELFORMAT_BGRA32:
+                    if (GLES2_NeedColorSwap(renderer->target)) {
+                        sourceType = GLES2_IMAGESOURCE_TEXTURE_OPAQUE_COLORSWAP;
+                        break;
+                    }
+                    SDL_FALLTHROUGH;
                 case SDL_PIXELFORMAT_RGBA32:
                 case SDL_PIXELFORMAT_RGB565:
                 case SDL_PIXELFORMAT_RGBA5551:
                 case SDL_PIXELFORMAT_RGBA4444:
                     sourceType = GLES2_IMAGESOURCE_TEXTURE_OPAQUE;
                     break;
-                case SDL_PIXELFORMAT_BGRA32:
-                    sourceType = GLES2_IMAGESOURCE_TEXTURE_OPAQUE_COLORSWAP;
-                    break;
                 case SDL_PIXELFORMAT_BGRX32:
-                    sourceType = GLES2_IMAGESOURCE_TEXTURE_COLORSWAP;
-                    break;
+                    if (GLES2_NeedColorSwap(renderer->target)) {
+                        sourceType = GLES2_IMAGESOURCE_TEXTURE_COLORSWAP;
+                        break;
+                    }
+                    SDL_FALLTHROUGH;
                 default:
+                    sourceType = GLES2_IMAGESOURCE_TEXTURE;
                     break;
                 }
                 break;
@@ -1308,8 +1337,11 @@ static bool SetCopyState(SDL_Renderer *renderer, const SDL_RenderCommand *cmd, v
             sourceType = GLES2_IMAGESOURCE_TEXTURE_INDEX8;
             break;
         case SDL_PIXELFORMAT_BGRA32:
-            sourceType = GLES2_IMAGESOURCE_TEXTURE_COLORSWAP;
-            break;
+            if (tdata->pixel_format != GL_BGRA_EXT) {
+                sourceType = GLES2_IMAGESOURCE_TEXTURE_COLORSWAP;
+                break;
+            }
+            SDL_FALLTHROUGH;
         case SDL_PIXELFORMAT_RGBA32:
         case SDL_PIXELFORMAT_RGB565:
         case SDL_PIXELFORMAT_RGBA5551:
@@ -1317,8 +1349,11 @@ static bool SetCopyState(SDL_Renderer *renderer, const SDL_RenderCommand *cmd, v
             sourceType = GLES2_IMAGESOURCE_TEXTURE;
             break;
         case SDL_PIXELFORMAT_BGRX32:
-            sourceType = GLES2_IMAGESOURCE_TEXTURE_OPAQUE_COLORSWAP;
-            break;
+            if (tdata->pixel_format != GL_BGRA_EXT) {
+                sourceType = GLES2_IMAGESOURCE_TEXTURE_OPAQUE_COLORSWAP;
+                break;
+            }
+            SDL_FALLTHROUGH;
         case SDL_PIXELFORMAT_RGBX32:
             sourceType = GLES2_IMAGESOURCE_TEXTURE_OPAQUE;
             break;
@@ -1462,7 +1497,7 @@ static void GLES2_InvalidateCachedState(SDL_Renderer *renderer)
 static bool GLES2_RunCommandQueue(SDL_Renderer *renderer, SDL_RenderCommand *cmd, void *vertices, size_t vertsize)
 {
     GLES2_RenderData *data = (GLES2_RenderData *)renderer->internal;
-    const bool colorswap = (renderer->target && (renderer->target->format == SDL_PIXELFORMAT_BGRA32 || renderer->target->format == SDL_PIXELFORMAT_BGRX32));
+    const bool colorswap = GLES2_NeedColorSwap(renderer->target);
 
 #if USE_VERTEX_BUFFER_OBJECTS
     const int vboidx = data->current_vertex_buffer;
@@ -1785,8 +1820,14 @@ static bool GLES2_CreateTexture(SDL_Renderer *renderer, SDL_Texture *texture, SD
     // Determine the corresponding GLES texture format params
     switch (texture->format) {
     case SDL_PIXELFORMAT_BGRA32:
-    case SDL_PIXELFORMAT_RGBA32:
     case SDL_PIXELFORMAT_BGRX32:
+        if (renderdata->GL_EXT_texture_format_BGRA8888_supported) {
+            format = GL_BGRA_EXT;
+            type = GL_UNSIGNED_BYTE;
+            break;
+        }
+        SDL_FALLTHROUGH;
+    case SDL_PIXELFORMAT_RGBA32:
     case SDL_PIXELFORMAT_RGBX32:
         format = GL_RGBA;
         type = GL_UNSIGNED_BYTE;
@@ -2291,6 +2332,7 @@ static void GLES2_DestroyTexture(SDL_Renderer *renderer, SDL_Texture *texture)
 static SDL_Surface *GLES2_RenderReadPixels(SDL_Renderer *renderer, const SDL_Rect *rect)
 {
     GLES2_RenderData *data = (GLES2_RenderData *)renderer->internal;
+    /* GLES only supports RGBA32 or an implementation-defined format */
     SDL_PixelFormat format = SDL_PIXELFORMAT_RGBA32;
     SDL_Surface *surface;
 
@@ -2298,6 +2340,10 @@ static SDL_Surface *GLES2_RenderReadPixels(SDL_Renderer *renderer, const SDL_Rec
         switch (renderer->target->format) {
         case SDL_PIXELFORMAT_BGRA32:
         case SDL_PIXELFORMAT_BGRX32:
+            if (GLES2_NeedColorSwap(renderer->target)) {
+                format = renderer->target->format;
+            }
+            break;
         case SDL_PIXELFORMAT_RGBX32:
             format = renderer->target->format;
             break;
@@ -2476,10 +2522,24 @@ static bool GLES2_CreateRenderer(SDL_Renderer *renderer, SDL_Window *window, SDL
     data->glGetIntegerv(GL_FRAMEBUFFER_BINDING, &window_framebuffer);
     data->window_framebuffer = (GLuint)window_framebuffer;
 
-    SDL_AddSupportedTextureFormat(renderer, SDL_PIXELFORMAT_BGRA32);    // SDL_PIXELFORMAT_ARGB8888 on little endian systems
-    SDL_AddSupportedTextureFormat(renderer, SDL_PIXELFORMAT_RGBA32);
-    SDL_AddSupportedTextureFormat(renderer, SDL_PIXELFORMAT_BGRX32);
-    SDL_AddSupportedTextureFormat(renderer, SDL_PIXELFORMAT_RGBX32);
+    if (SDL_GL_ExtensionSupported("GL_EXT_texture_format_BGRA8888")) {
+        data->GL_EXT_texture_format_BGRA8888_supported = true;
+    }
+
+    if (data->GL_EXT_texture_format_BGRA8888_supported) {
+        // Assume that BGRA32 is the best format when supported
+        // TODO: Is there a better way of determining this?
+        SDL_AddSupportedTextureFormat(renderer, SDL_PIXELFORMAT_BGRA32);    // SDL_PIXELFORMAT_ARGB8888 on little endian systems
+        SDL_AddSupportedTextureFormat(renderer, SDL_PIXELFORMAT_BGRX32);
+        SDL_AddSupportedTextureFormat(renderer, SDL_PIXELFORMAT_RGBA32);
+        SDL_AddSupportedTextureFormat(renderer, SDL_PIXELFORMAT_RGBX32);
+    } else {
+        // BGRA32 is emulated using shaders - treat RGBA32 as the best format
+        SDL_AddSupportedTextureFormat(renderer, SDL_PIXELFORMAT_RGBA32);
+        SDL_AddSupportedTextureFormat(renderer, SDL_PIXELFORMAT_RGBX32);
+        SDL_AddSupportedTextureFormat(renderer, SDL_PIXELFORMAT_BGRA32);    // SDL_PIXELFORMAT_ARGB8888 on little endian systems
+        SDL_AddSupportedTextureFormat(renderer, SDL_PIXELFORMAT_BGRX32);
+    }
     SDL_AddSupportedTextureFormat(renderer, SDL_PIXELFORMAT_RGB565);
     SDL_AddSupportedTextureFormat(renderer, SDL_PIXELFORMAT_RGBA5551);
     SDL_AddSupportedTextureFormat(renderer, SDL_PIXELFORMAT_RGBA4444);
