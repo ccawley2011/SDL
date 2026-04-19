@@ -1217,6 +1217,9 @@ static bool SetCopyState(SDL_Renderer *renderer, const SDL_RenderCommand *cmd, v
                 switch (renderer->target->format) {
                 case SDL_PIXELFORMAT_RGBA32:
                 case SDL_PIXELFORMAT_RGBX32:
+                case SDL_PIXELFORMAT_RGB565:
+                case SDL_PIXELFORMAT_RGBA5551:
+                case SDL_PIXELFORMAT_RGBA4444:
                     sourceType = GLES2_IMAGESOURCE_TEXTURE_COLORSWAP;
                     break;
                 case SDL_PIXELFORMAT_BGRX32:
@@ -1227,6 +1230,9 @@ static bool SetCopyState(SDL_Renderer *renderer, const SDL_RenderCommand *cmd, v
                 }
                 break;
             case SDL_PIXELFORMAT_RGBA32:
+            case SDL_PIXELFORMAT_RGB565:
+            case SDL_PIXELFORMAT_RGBA5551:
+            case SDL_PIXELFORMAT_RGBA4444:
                 switch (renderer->target->format) {
                 case SDL_PIXELFORMAT_BGRA32:
                 case SDL_PIXELFORMAT_BGRX32:
@@ -1242,6 +1248,9 @@ static bool SetCopyState(SDL_Renderer *renderer, const SDL_RenderCommand *cmd, v
             case SDL_PIXELFORMAT_BGRX32:
                 switch (renderer->target->format) {
                 case SDL_PIXELFORMAT_RGBA32:
+                case SDL_PIXELFORMAT_RGB565:
+                case SDL_PIXELFORMAT_RGBA5551:
+                case SDL_PIXELFORMAT_RGBA4444:
                     sourceType = GLES2_IMAGESOURCE_TEXTURE_COLORSWAP;
                     break;
                 case SDL_PIXELFORMAT_BGRA32:
@@ -1257,6 +1266,9 @@ static bool SetCopyState(SDL_Renderer *renderer, const SDL_RenderCommand *cmd, v
             case SDL_PIXELFORMAT_RGBX32:
                 switch (renderer->target->format) {
                 case SDL_PIXELFORMAT_RGBA32:
+                case SDL_PIXELFORMAT_RGB565:
+                case SDL_PIXELFORMAT_RGBA5551:
+                case SDL_PIXELFORMAT_RGBA4444:
                     sourceType = GLES2_IMAGESOURCE_TEXTURE_OPAQUE;
                     break;
                 case SDL_PIXELFORMAT_BGRA32:
@@ -1299,6 +1311,9 @@ static bool SetCopyState(SDL_Renderer *renderer, const SDL_RenderCommand *cmd, v
             sourceType = GLES2_IMAGESOURCE_TEXTURE_COLORSWAP;
             break;
         case SDL_PIXELFORMAT_RGBA32:
+        case SDL_PIXELFORMAT_RGB565:
+        case SDL_PIXELFORMAT_RGBA5551:
+        case SDL_PIXELFORMAT_RGBA4444:
             sourceType = GLES2_IMAGESOURCE_TEXTURE;
             break;
         case SDL_PIXELFORMAT_BGRX32:
@@ -1775,6 +1790,18 @@ static bool GLES2_CreateTexture(SDL_Renderer *renderer, SDL_Texture *texture, SD
     case SDL_PIXELFORMAT_RGBX32:
         format = GL_RGBA;
         type = GL_UNSIGNED_BYTE;
+        break;
+    case SDL_PIXELFORMAT_RGB565:
+        format = GL_RGB;
+        type = GL_UNSIGNED_SHORT_5_6_5;
+        break;
+    case SDL_PIXELFORMAT_RGBA5551:
+        format = GL_RGBA;
+        type = GL_UNSIGNED_SHORT_5_5_5_1;
+        break;
+    case SDL_PIXELFORMAT_RGBA4444:
+        format = GL_RGBA;
+        type = GL_UNSIGNED_SHORT_4_4_4_4;
         break;
     case SDL_PIXELFORMAT_INDEX8:
 #ifdef SDL_HAVE_YUV
@@ -2264,8 +2291,20 @@ static void GLES2_DestroyTexture(SDL_Renderer *renderer, SDL_Texture *texture)
 static SDL_Surface *GLES2_RenderReadPixels(SDL_Renderer *renderer, const SDL_Rect *rect)
 {
     GLES2_RenderData *data = (GLES2_RenderData *)renderer->internal;
-    SDL_PixelFormat format = renderer->target ? renderer->target->format : SDL_PIXELFORMAT_RGBA32;
+    SDL_PixelFormat format = SDL_PIXELFORMAT_RGBA32;
     SDL_Surface *surface;
+
+    if (renderer->target) {
+        switch (renderer->target->format) {
+        case SDL_PIXELFORMAT_BGRA32:
+        case SDL_PIXELFORMAT_BGRX32:
+        case SDL_PIXELFORMAT_RGBX32:
+            format = renderer->target->format;
+            break;
+        default:
+            break;
+        }
+    }
 
     surface = SDL_CreateSurface(rect->w, rect->h, format);
     if (!surface) {
@@ -2441,6 +2480,9 @@ static bool GLES2_CreateRenderer(SDL_Renderer *renderer, SDL_Window *window, SDL
     SDL_AddSupportedTextureFormat(renderer, SDL_PIXELFORMAT_RGBA32);
     SDL_AddSupportedTextureFormat(renderer, SDL_PIXELFORMAT_BGRX32);
     SDL_AddSupportedTextureFormat(renderer, SDL_PIXELFORMAT_RGBX32);
+    SDL_AddSupportedTextureFormat(renderer, SDL_PIXELFORMAT_RGB565);
+    SDL_AddSupportedTextureFormat(renderer, SDL_PIXELFORMAT_RGBA5551);
+    SDL_AddSupportedTextureFormat(renderer, SDL_PIXELFORMAT_RGBA4444);
     SDL_AddSupportedTextureFormat(renderer, SDL_PIXELFORMAT_INDEX8);
 #ifdef SDL_HAVE_YUV
     SDL_AddSupportedTextureFormat(renderer, SDL_PIXELFORMAT_YV12);
