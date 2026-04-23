@@ -442,30 +442,28 @@ static bool NGAGE_RunCommandQueue(SDL_Renderer *renderer, SDL_RenderCommand *cmd
 
 static bool NGAGE_UpdateTexture(SDL_Renderer *renderer, SDL_Texture *texture, const SDL_Rect *rect, const void *pixels, int pitch)
 {
-    NGAGE_TextureData *phdata = (NGAGE_TextureData *)texture->internal;
+    /*  NGAGE_TextureData *phdata = (NGAGE_TextureData *) texture->internal; */
+    const Uint8 *src;
+    Uint8 *dst;
+    int row, length, dpitch;
+    src = pixels;
 
-    if (!phdata) {
+    if (!NGAGE_LockTexture(renderer, texture, rect, (void **)&dst, &dpitch)) {
         return false;
     }
 
-    Uint8 *dst = (Uint8 *)NGAGE_GetBitmapDataAddress(phdata);
-    if (!dst) {
-        return false;
+    length = rect->w * SDL_BYTESPERPIXEL(texture->format);
+    if (length == pitch && length == dpitch) {
+        SDL_memcpy(dst, src, length * rect->h);
+    } else {
+        for (row = 0; row < rect->h; ++row) {
+            SDL_memcpy(dst, src, length);
+            src += pitch;
+            dst += dpitch;
+        }
     }
 
-    const int bytes_per_pixel = 2;
-    const int bitmap_pitch = texture->w * bytes_per_pixel;
-
-    const Uint8 *src = (const Uint8 *)pixels;
-    dst += rect->y * bitmap_pitch + rect->x * bytes_per_pixel;
-
-    const size_t length = (size_t)rect->w * bytes_per_pixel;
-    for (int row = 0; row < rect->h; ++row) {
-        SDL_memcpy(dst, src, length);
-        src += pitch;
-        dst += bitmap_pitch;
-    }
-
+    NGAGE_UnlockTexture(renderer, texture);
     return true;
 }
 
@@ -482,8 +480,8 @@ static bool NGAGE_LockTexture(SDL_Renderer *renderer, SDL_Texture *texture, cons
         return false;
     }
 
-    const int bytes_per_pixel = 2;
-    const int bitmap_pitch = texture->w * bytes_per_pixel;
+    const int bytes_per_pixel = SDL_BYTESPERPIXEL(texture->format);
+    const int bitmap_pitch = NGAGE_GetBitmapDataStride(phdata);
 
     *pixels = (void *)(data + rect->y * bitmap_pitch + rect->x * bytes_per_pixel);
     *pitch = bitmap_pitch;

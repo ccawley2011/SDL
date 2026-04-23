@@ -88,6 +88,14 @@ void *NGAGE_GetBitmapDataAddress(NGAGE_TextureData *data)
     return data->bitmap->DataAddress();
 }
 
+int NGAGE_GetBitmapDataStride(NGAGE_TextureData *data)
+{
+    if (!data || !data->bitmap) {
+        return NULL;
+    }
+    return data->bitmap->DataStride();
+}
+
 void NGAGE_DrawLines(NGAGE_Vertex *verts, const int count)
 {
     gRenderer->DrawLines(verts, count);
@@ -328,8 +336,7 @@ bool CRenderer::Copy(SDL_Renderer *renderer, SDL_Texture *texture, const SDL_Rec
     SDL_FColor *c = &texture->color;
     int w = texture->w;
     int h = texture->h;
-    const int bytes_per_pixel = 2;
-    int pitch = w * bytes_per_pixel;
+    TInt pitch = phdata->bitmap->DataStride();
     void *source = phdata->bitmap->DataAddress();
     void *dest;
 
@@ -337,7 +344,7 @@ bool CRenderer::Copy(SDL_Renderer *renderer, SDL_Texture *texture, const SDL_Rec
         return false;
     }
 
-    TInt required_size = pitch * h;
+    TInt required_size = phdata->bitmap->DataSize();
     if (required_size > iPixelBufferSize) {
         void *new_buffer_a = SDL_realloc(iPixelBufferA, required_size);
         if (!new_buffer_a) {
@@ -379,7 +386,7 @@ bool CRenderer::Copy(SDL_Renderer *renderer, SDL_Texture *texture, const SDL_Rec
         source = dest;
     }
 
-    Mem::Copy(phdata->bitmap->DataAddress(), source, pitch * h);
+    Mem::Copy(phdata->bitmap->DataAddress(), source, required_size);
 
     if (phdata->bitmap) {
         CFbsBitGc *gc = GetCurrentGc();
@@ -403,8 +410,7 @@ bool CRenderer::CopyEx(SDL_Renderer *renderer, SDL_Texture *texture, const NGAGE
     SDL_FColor *c = &texture->color;
     int w = texture->w;
     int h = texture->h;
-    const int bytes_per_pixel = 2;
-    int pitch = w * bytes_per_pixel;
+    TInt pitch = phdata->bitmap->DataStride();
     void *source = phdata->bitmap->DataAddress();
     void *dest;
 
@@ -412,7 +418,7 @@ bool CRenderer::CopyEx(SDL_Renderer *renderer, SDL_Texture *texture, const NGAGE
         return false;
     }
 
-    TInt required_size = pitch * h;
+    TInt required_size = phdata->bitmap->DataSize();
     if (required_size > iPixelBufferSize) {
         void *new_buffer_a = SDL_realloc(iPixelBufferA, required_size);
         if (!new_buffer_a) {
@@ -454,7 +460,7 @@ bool CRenderer::CopyEx(SDL_Renderer *renderer, SDL_Texture *texture, const NGAGE
         source = dest;
     }
 
-    Mem::Copy(phdata->bitmap->DataAddress(), source, pitch * h);
+    Mem::Copy(phdata->bitmap->DataAddress(), source, required_size);
 
     if (phdata->bitmap) {
         CFbsBitGc *gc = GetCurrentGc();
